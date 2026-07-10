@@ -1,0 +1,6 @@
+{
+  "name": "api",
+  "type": "integration",
+  "runtime": "nodejs20",
+  "entry": "index.js"
+}

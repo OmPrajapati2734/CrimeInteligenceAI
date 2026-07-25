@@ -101,3 +101,6 @@ Go to your **Zoho Catalyst Console > Data Store** and create the tables listed i
    catalyst deploy
    ```
 5. Retrieve the live deployment link from the terminal output.
+
+
+

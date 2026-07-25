@@ -548,7 +548,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ maskPII }) => {
                   </form>
                 ) : (
                   /* RENDER SELECTED NODE DETAILS */
-                  <div className="flex flex-col gap-3 h-full">
+                  <div className="flex flex-col gap-3 h-full max-h-[440px] overflow-y-auto pr-1">
                     <div className="flex justify-between items-center border-b border-border-color pb-2">
                       <span className={`badge ${
                         selectedNode.group === 'criminal' ? 'badge-danger' :
@@ -560,8 +560,8 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ maskPII }) => {
                       <span className="text-[9px] text-text-muted font-mono font-bold">{selectedNode.id}</span>
                     </div>
 
-                    <div>
-                      <h3 className="text-sm font-extrabold text-text-primary font-outfit">
+                    <div className="break-words w-full">
+                      <h3 className="text-sm font-extrabold text-text-primary font-outfit break-words">
                         {maskPII && selectedNode.group === 'phone' ? maskPIIData(selectedNode.label, 'phone') : selectedNode.label}
                       </h3>
                       {selectedNode.age && (
@@ -585,10 +585,24 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ maskPII }) => {
                       </div>
                     )}
 
+                    {/* ASSIGNED OFFICERS INFO SECTION (For FIR cases) */}
+                    {selectedNode.group === 'fir' && (
+                      <div className="p-3 bg-[#143D73]/10 border border-[#143D73]/25 rounded-lg space-y-2 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-text-secondary font-bold">Assigned Officers:</span>
+                          <span className="bg-[#143D73] text-white text-[9px] px-1.5 py-0.5 rounded font-bold font-mono">2 Officers</span>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-text-primary font-semibold font-outfit flex items-center gap-1">• Inspector H. S. Rao (Lead IO)</p>
+                          <p className="text-text-secondary flex items-center gap-1">• Assistant Inspector Ramesh Gowda</p>
+                        </div>
+                      </div>
+                    )}
+
                     {selectedNode.mo && (
-                      <div className="text-xs">
+                      <div className="text-xs break-words w-full">
                         <span className="text-text-secondary block mb-1 font-semibold">Intelligence / MO Profile:</span>
-                        <p className="p-2 bg-bg-primary rounded border border-border-color text-text-secondary leading-relaxed text-[10px]">
+                        <p className="p-2 bg-bg-primary rounded border border-border-color text-text-secondary leading-relaxed text-[10px] break-words whitespace-pre-wrap">
                           {selectedNode.mo}
                         </p>
                       </div>

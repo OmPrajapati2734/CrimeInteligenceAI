@@ -1,0 +1,11 @@
+{
+	"deployment": {
+		"name": "crimeinteligenceai_function",
+		"stack": "node22",
+		"type": "advancedio",
+		"env_variables": {}
+	},
+	"execution": {
+		"main": "index.js"
+	}
+}

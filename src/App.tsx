@@ -42,6 +42,7 @@ import { PatrolManagement } from './components/PatrolManagement';
 import { AIIntelligence } from './components/AIIntelligence';
 import { FIRDigitizer } from './components/FIRDigitizer';
 import DatabaseManager from './components/DatabaseManager';
+import DatasetTraining from './components/DatasetTraining';
 import { fetchHotspots, postAuditLog, fetchCases, fetchPatrols, fetchIntelligence, postNewCase } from './utils/api';
 
 
@@ -435,6 +436,7 @@ function App() {
             { id: "patrol", label: "Patrol Management", icon: Shield },
             { id: "similar", label: "Similar Case Finder", icon: FileSearch },
             { id: "predict", label: "Predictive Risk Engine", icon: Brain },
+            { id: "training", label: "Big Data Model Trainer", icon: Brain },
             { id: "intelligence", label: "AI Intelligence", icon: Brain },
             { id: "report", label: "AI Report Generator", icon: FileText },
             { id: "security", label: "Secure Audit Logs", icon: Lock }
@@ -800,6 +802,11 @@ function App() {
             />
           )}
 
+          {/* TAB 9.5: BIG DATA DATASET MODEL TRAINER */}
+          {activeTab === "training" && (
+            <DatasetTraining />
+          )}
+
           {/* TAB 10: AI INTELLIGENCE */}
           {activeTab === "intelligence" && (
             <AIIntelligence />
@@ -848,9 +855,15 @@ function App() {
             ) : (
               <Info size={15} className="text-accent mt-0.5 flex-shrink-0" />
             )}
-            <div>
+            <div className="flex-1">
               <p className="text-xs font-semibold leading-relaxed">{notif.msg}</p>
             </div>
+            <button 
+              onClick={() => setNotifications(prev => prev.filter(n => n.id !== notif.id))}
+              className="text-xs font-bold opacity-60 hover:opacity-100 px-1 hover:text-danger select-none"
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

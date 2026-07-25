@@ -1,520 +1,541 @@
-import React, { useState, useEffect } from 'react';
-import { FilePlus2, CheckCircle2, ChevronRight, AlertCircle, Save, Trash2, ArrowLeft, Plus, X } from 'lucide-react';
-import { fetchCrimeTypes, addCrimeType } from '../utils/api';
+import React, { useState } from 'react';
+import { 
+  FilePlus2, Plus, Calendar, Search, 
+  UserCheck, UploadCloud, FileText 
+} from 'lucide-react';
 
-interface WizardData {
+interface IncidentCase {
+  id: string;
   title: string;
   date: string;
   district: string;
   station: string;
   crimeType: string;
+  status: 'Pending' | 'Under Investigation' | 'Solved';
+  assignedOfficer: string;
   description: string;
-  mo: string;
-  connectedVehicles: string;
-  suspectAlias: string;
-  evidence: string;
+  proofDocument?: string;
+  resolutionSummary?: string;
 }
 
-const initialData: WizardData = {
-  title: '',
-  date: new Date().toISOString().substring(0, 16),
-  district: 'Bengaluru City',
-  station: '',
-  crimeType: 'Burglary',
-  description: '',
-  mo: '',
-  connectedVehicles: '',
-  suspectAlias: '',
-  evidence: '',
-};
+const initialIncidents: IncidentCase[] = [
+  {
+    id: "FIR-2026-102",
+    title: "Commercial Burglary at Gold Jewellers",
+    date: "2026-07-24T22:30",
+    district: "Mysuru City",
+    station: "Devaraja Station",
+    crimeType: "Burglary",
+    status: "Under Investigation",
+    assignedOfficer: "Inspector H. S. Rao",
+    description: "Looting of showcase items. Modus operandi shows window grill cuts."
+  },
+  {
+    id: "FIR-2026-103",
+    title: "Chain Snatching Incident Near Park Gate",
+    date: "2026-07-25T08:15",
+    district: "Bengaluru City",
+    station: "Jayanagar Station",
+    crimeType: "Snatching",
+    status: "Pending",
+    assignedOfficer: "Unassigned",
+    description: "Suspects on motor vehicle snatched gold chain from victim during morning walk."
+  }
+];
 
-interface LogCaseWizardProps {
+export const LogCaseWizard: React.FC<{
   onSuccess: (newCase: any) => void;
   showNotification: (msg: string, type: 'success' | 'warning' | 'danger' | 'info') => void;
-}
+}> = ({ onSuccess, showNotification }) => {
+  const [activeSubTab, setActiveSubTab] = useState<'create' | 'list'>('create');
+  const [incidents, setIncidents] = useState<IncidentCase[]>(initialIncidents);
 
-export const LogCaseWizard: React.FC<LogCaseWizardProps> = ({ onSuccess, showNotification }) => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState<WizardData>(initialData);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [lastSaved, setLastSaved] = useState<string>('');
-  const [showConfirmReset, setShowConfirmReset] = useState(false);
+  // Date Filters
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Dynamic crime types
-  const [crimeTypes, setCrimeTypes] = useState<string[]>([]);
-  const [newType, setNewType] = useState('');
-  const [showAddTypeInput, setShowAddTypeInput] = useState(false);
+  // Form Fields
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().substring(0, 16));
+  const [district, setDistrict] = useState('Bengaluru City');
+  const [station, setStation] = useState('');
+  const [crimeType, setCrimeType] = useState('Burglary');
+  const [description, setDescription] = useState('');
+  const [assignedOfficer, setAssignedOfficer] = useState('Unassigned');
 
-  const loadTypes = async () => {
-    try {
-      const types = await fetchCrimeTypes();
-      setCrimeTypes(types);
-    } catch (e) {
-      console.error(e);
+  // Dynamic registers & dynamic inline creators
+  const [districtsList, setDistrictsList] = useState<string[]>(["Bengaluru City", "Mysuru City", "Hubballi-Dharwad", "Belagavi"]);
+  const [crimeTypeList, setCrimeTypeList] = useState<string[]>(["Burglary", "Snatching", "Cyber Fraud", "Assault", "Vehicle Theft"]);
+  const officersList = [
+    "Inspector H. S. Rao", "SP Anant Kumar", "DSP Kavitha Patil", "Inspector Ramesh Gowda", "Unassigned"
+  ];
+
+  // Inline Add Popups
+  const [showAddDistrict, setShowAddDistrict] = useState(false);
+  const [newDistrictName, setNewDistrictName] = useState('');
+  
+  const [showAddCrime, setShowAddCrime] = useState(false);
+  const [newCrimeName, setNewCrimeName] = useState('');
+
+  // Assign & Solved Modal Settings
+  const [selectedIncidentForUpdate, setSelectedIncidentForUpdate] = useState<IncidentCase | null>(null);
+  const [updateOfficer, setUpdateOfficer] = useState('Unassigned');
+  const [updateStatus, setUpdateStatus] = useState<'Pending' | 'Under Investigation' | 'Solved'>('Pending');
+  const [proofFile, setProofFile] = useState<string>('');
+  const [resolutionSummary, setResolutionSummary] = useState('');
+
+  const handleCreateDistrict = () => {
+    if (!newDistrictName.trim()) return;
+    if (districtsList.includes(newDistrictName.trim())) {
+      showNotification("District already exists.", "warning");
+      return;
     }
+    setDistrictsList(prev => [...prev, newDistrictName.trim()]);
+    setDistrict(newDistrictName.trim());
+    setNewDistrictName('');
+    setShowAddDistrict(false);
+    showNotification("New jurisdiction district added successfully.", "success");
   };
 
-  const handleAddNewType = async () => {
-    if (!newType.trim()) return;
-    try {
-      const updatedTypes = await addCrimeType(newType.trim());
-      setCrimeTypes(updatedTypes);
-      setFormData(prev => ({ ...prev, crimeType: newType.trim() }));
-      setNewType('');
-      setShowAddTypeInput(false);
-      showNotification(`Crime classification type "${newType.trim()}" added.`, 'success');
-    } catch (e) {
-      console.error(e);
-      showNotification("Failed to add crime classification type.", 'danger');
+  const handleCreateCrime = () => {
+    if (!newCrimeName.trim()) return;
+    if (crimeTypeList.includes(newCrimeName.trim())) {
+      showNotification("Crime classification already exists.", "warning");
+      return;
     }
+    setCrimeTypeList(prev => [...prev, newCrimeName.trim()]);
+    setCrimeType(newCrimeName.trim());
+    setNewCrimeName('');
+    setShowAddCrime(false);
+    showNotification("New crime classification head added.", "success");
   };
 
-  useEffect(() => {
-    loadTypes();
-  }, []);
-
-  // Load autosaved data on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('ksp_case_wizard_autosave');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setFormData(parsed);
-        const time = localStorage.getItem('ksp_case_wizard_autosave_time') || '';
-        setLastSaved(time);
-      } catch (e) {
-        console.error('Failed to parse autosave data', e);
-      }
-    }
-  }, []);
-
-  // Autosave when form data changes
-  const saveToLocal = (data: WizardData) => {
-    localStorage.setItem('ksp_case_wizard_autosave', JSON.stringify(data));
-    const now = new Date().toLocaleTimeString();
-    localStorage.setItem('ksp_case_wizard_autosave_time', now);
-    setLastSaved(now);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    const updated = { ...formData, [name]: value };
-    setFormData(updated);
-    saveToLocal(updated);
-    
-    // Clear error
-    if (errors[name]) {
-      setErrors(prev => {
-        const copy = { ...prev };
-        delete copy[name];
-        return copy;
-      });
-    }
-  };
-
-  const validateStep = (currentStep: number): boolean => {
-    const newErrors: { [key: string]: string } = {};
-    
-    if (currentStep === 1) {
-      if (!formData.title.trim()) newErrors.title = 'Case Title is required.';
-      if (!formData.station.trim()) newErrors.station = 'Police Station name is required.';
-    } else if (currentStep === 2) {
-      if (!formData.description.trim() || formData.description.length < 10) {
-        newErrors.description = 'Description must be at least 10 characters long.';
-      }
-      if (!formData.mo.trim() || formData.mo.length < 10) {
-        newErrors.mo = 'Modus Operandi details must be at least 10 characters long.';
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleNext = () => {
-    if (validateStep(step)) {
-      setStep(prev => prev + 1);
-    } else {
-      showNotification('Please correct validation errors before moving ahead.', 'warning');
-    }
-  };
-
-  const handleBack = () => {
-    setStep(prev => prev - 1);
-  };
-
-  const handleReset = () => {
-    setShowConfirmReset(true);
-  };
-
-  const confirmResetAction = () => {
-    setFormData(initialData);
-    localStorage.removeItem('ksp_case_wizard_autosave');
-    localStorage.removeItem('ksp_case_wizard_autosave_time');
-    setLastSaved('');
-    setStep(1);
-    setErrors({});
-    setShowConfirmReset(false);
-    showNotification('Wizard form cleared.', 'info');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmitCase = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateStep(step)) return;
+    if (!title.trim() || !station.trim() || !description.trim()) {
+      showNotification("Please fill in all required fields.", "warning");
+      return;
+    }
 
-    // Create a mock FIR record format
-    const newCase = {
+    const newFIRCases: IncidentCase = {
       id: `FIR-2026-${Math.floor(Math.random() * 900 + 100)}`,
-      title: formData.title,
-      date: new Date(formData.date).toISOString(),
-      district: formData.district,
-      station: formData.station,
-      crimeType: formData.crimeType,
-      status: 'Under Investigation',
-      io: 'Inspector H. S. Rao',
-      description: formData.description,
-      mo: formData.mo,
-      suspects: formData.suspectAlias ? [`CRIM-${Math.floor(Math.random() * 9000 + 1000)}`] : [],
-      connectedVehicles: formData.connectedVehicles ? formData.connectedVehicles.split(',').map(s => s.trim()) : [],
-      evidence: formData.evidence ? formData.evidence.split(',').map(s => s.trim()) : [],
+      title,
+      date,
+      district,
+      station,
+      crimeType,
+      status: 'Pending',
+      assignedOfficer,
+      description
     };
 
-    onSuccess(newCase);
+    setIncidents(prev => [newFIRCases, ...prev]);
+    onSuccess(newFIRCases);
+    showNotification(`New incident ${newFIRCases.id} logged securely.`, "success");
 
-    // Clear autosave
-    localStorage.removeItem('ksp_case_wizard_autosave');
-    localStorage.removeItem('ksp_case_wizard_autosave_time');
-    setFormData(initialData);
-    setLastSaved('');
-    setStep(1);
-    
-    showNotification(`New case file ${newCase.id} successfully registered in secure ledger.`, 'success');
+    // Reset Form
+    setTitle('');
+    setStation('');
+    setDescription('');
+    setActiveSubTab('list');
   };
 
-  const stepProgress = (step / 3) * 100;
+  const handleUpdateIncident = () => {
+    if (!selectedIncidentForUpdate) return;
+    
+    setIncidents(prev => prev.map(inc => {
+      if (inc.id === selectedIncidentForUpdate.id) {
+        return {
+          ...inc,
+          assignedOfficer: updateOfficer,
+          status: updateStatus,
+          proofDocument: proofFile || inc.proofDocument,
+          resolutionSummary: resolutionSummary || inc.resolutionSummary
+        };
+      }
+      return inc;
+    }));
+
+    showNotification(`Case assignment details for ${selectedIncidentForUpdate.id} updated.`, "success");
+    setSelectedIncidentForUpdate(null);
+    setProofFile('');
+    setResolutionSummary('');
+  };
+
+  // Filtered incidents
+  const filteredIncidents = incidents.filter(inc => {
+    const matchesSearch = inc.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          inc.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          inc.station.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const incDate = new Date(inc.date).getTime();
+    const startLimit = startDate ? new Date(startDate).getTime() : 0;
+    const endLimit = endDate ? new Date(endDate).getTime() : Infinity;
+
+    return matchesSearch && incDate >= startLimit && incDate <= endLimit;
+  });
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      {/* Breadcrumb Navigation & Autosave Indicator */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6 border-b border-border-color pb-4">
-        <div>
-          <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-1" aria-label="Breadcrumb">
-            <span className="font-semibold text-text-secondary">KCIOS OS</span>
-            <ChevronRight size={12} />
-            <span className="font-semibold text-text-secondary">Operations</span>
-            <ChevronRight size={12} />
-            <span className="text-text-primary font-medium">Secure Incident Entry Wizard</span>
-          </nav>
-          <h2 className="text-xl font-bold font-outfit text-text-primary flex items-center gap-2">
-            <FilePlus2 className="text-accent" size={20} />
-            New secure Incident log
-          </h2>
-        </div>
-
-        {lastSaved && (
-          <div className="flex items-center gap-1.5 bg-primary-light border border-primary/20 px-2.5 py-1 rounded text-[10px] text-text-secondary font-mono self-start sm:self-center">
-            <Save size={12} className="text-success animate-pulse" />
-            <span>Draft autosaved at {lastSaved}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Progress Indicator */}
-      <div className="mb-6">
-        <div className="flex justify-between text-xs font-semibold text-text-secondary mb-2 font-mono">
-          <span>STEP {step} OF 3: {step === 1 ? 'General Details' : step === 2 ? 'Modus Operandi & Narrative' : 'Evidence & Suspects'}</span>
-          <span>{Math.round(stepProgress)}% Complete</span>
-        </div>
-        <div className="w-full bg-bg-tertiary h-2 rounded-full overflow-hidden border border-border-color">
-          <div 
-            className="h-full bg-accent transition-all duration-300 ease-out" 
-            style={{ width: `${stepProgress}%` }}
-          />
+    <div className="space-y-6">
+      {/* Tab Navigation header */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200">
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setActiveSubTab('create')}
+            className={`px-4 py-2 rounded text-xs font-bold transition-all ${
+              activeSubTab === 'create' ? 'bg-sky-800 text-white' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Log New Incident
+          </button>
+          <button 
+            onClick={() => setActiveSubTab('list')}
+            className={`px-4 py-2 rounded text-xs font-bold transition-all ${
+              activeSubTab === 'list' ? 'bg-sky-800 text-white' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Explore Registered Cases ({incidents.length})
+          </button>
         </div>
       </div>
 
-      {/* Main Wizard Card */}
-      <div className="card-panel p-6 mb-6">
-        <form onSubmit={handleSubmit} noValidate>
-          {/* STEP 1: GENERAL METADATA */}
-          {step === 1 && (
-            <div className="flex flex-col gap-5">
-              <h3 className="text-sm font-bold text-accent uppercase tracking-wider font-outfit mb-2">Step 1: General Incident Information</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5 col-span-1 md:col-span-2">
-                  <label className="text-xs font-bold text-text-secondary flex items-center gap-1">
-                    Case / FIR Title <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    className={`bg-bg-primary text-text-primary text-xs border rounded-lg p-2.5 outline-none transition focus:border-accent ${
-                      errors.title ? 'border-danger' : 'border-border-color'
-                    }`}
-                    placeholder="e.g. Daylight Burglary at Jayanagar Block 4 Residence"
-                    required
-                  />
-                  {errors.title && <span className="text-[10px] text-danger font-semibold flex items-center gap-1 mt-0.5"><AlertCircle size={10} /> {errors.title}</span>}
-                </div>
+      {activeSubTab === 'create' ? (
+        <div className="bg-white rounded-lg border border-slate-200 p-6 max-w-2xl mx-auto">
+          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <FilePlus2 className="text-sky-800" size={18} />
+            Secure Incident Entry Wizard
+          </h3>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-text-secondary">Incident Date & Time <span className="text-danger">*</span></label>
-                  <input
-                    type="datetime-local"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
-                    required
-                  />
-                </div>
+          <form onSubmit={handleSubmitCase} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Incident Title *</label>
+              <input 
+                type="text" 
+                value={title} 
+                onChange={e => setTitle(e.target.value)}
+                placeholder="e.g. Armed robbery at Jayanagar Bank branch"
+                className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none focus:border-sky-800"
+                required
+              />
+            </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-text-secondary">Crime Classification Type <span className="text-danger">*</span></label>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddTypeInput(!showAddTypeInput)}
-                      className="text-[10px] text-accent hover:text-accent/80 font-bold flex items-center gap-0.5"
-                    >
-                      {showAddTypeInput ? <X size={10} /> : <Plus size={10} />}
-                      {showAddTypeInput ? 'Cancel' : 'Add Custom Type'}
-                    </button>
-                  </div>
-                  
-                  {showAddTypeInput ? (
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Enter new crime type..."
-                        value={newType}
-                        onChange={(e) => setNewType(e.target.value)}
-                        className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2 flex-1 outline-none focus:border-accent font-semibold"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddNewType}
-                        className="px-3 bg-[#143D73] text-white rounded-lg text-xs font-bold hover:bg-[#1b4b8c] transition flex items-center justify-center gap-1 border border-[#1b4b8c]"
-                      >
-                        <Plus size={12} /> Add
-                      </button>
-                    </div>
-                  ) : (
-                    <select
-                      name="crimeType"
-                      value={formData.crimeType}
-                      onChange={handleChange}
-                      className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
-                    >
-                      {crimeTypes.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Date & Time *</label>
+                <input 
+                  type="datetime-local" 
+                  value={date} 
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Police Station *</label>
+                <input 
+                  type="text" 
+                  value={station} 
+                  onChange={e => setStation(e.target.value)}
+                  placeholder="e.g. Jayanagar Police Station"
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-text-secondary">Jurisdiction District <span className="text-danger">*</span></label>
-                  <select
-                    name="district"
-                    value={formData.district}
-                    onChange={handleChange}
-                    className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
+            {/* Jurisdiction Selector with dynamic inline adder */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold text-slate-600">Jurisdiction District</label>
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddDistrict(true)}
+                    className="text-[10px] text-sky-800 font-bold hover:underline flex items-center gap-0.5"
                   >
-                    <option value="Bengaluru City">Bengaluru City</option>
-                    <option value="Mysuru City">Mysuru City</option>
-                    <option value="Mangaluru">Mangaluru</option>
-                    <option value="Hubballi-Dharwad">Hubballi-Dharwad</option>
-                    <option value="Belagavi">Belagavi</option>
-                  </select>
+                    <Plus size={10} /> Add New
+                  </button>
                 </div>
+                <select 
+                  value={district} 
+                  onChange={e => setDistrict(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none bg-white"
+                >
+                  {districtsList.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-text-secondary flex items-center gap-1">
-                    Police Station <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="station"
-                    value={formData.station}
-                    onChange={handleChange}
-                    className={`bg-bg-primary text-text-primary text-xs border rounded-lg p-2.5 outline-none transition focus:border-accent ${
-                      errors.station ? 'border-danger' : 'border-border-color'
-                    }`}
-                    placeholder="e.g. Jayanagar PS"
-                    required
-                  />
-                  {errors.station && <span className="text-[10px] text-danger font-semibold flex items-center gap-1 mt-0.5"><AlertCircle size={10} /> {errors.station}</span>}
+              {/* Crime Type Head with dynamic inline adder */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold text-slate-600">Offence Classification</label>
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddCrime(true)}
+                    className="text-[10px] text-sky-800 font-bold hover:underline flex items-center gap-0.5"
+                  >
+                    <Plus size={10} /> Add New
+                  </button>
                 </div>
+                <select 
+                  value={crimeType} 
+                  onChange={e => setCrimeType(e.target.value)}
+                  className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none bg-white"
+                >
+                  {crimeTypeList.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          )}
 
-          {/* STEP 2: NARRATIVE & MODUS OPERANDI */}
-          {step === 2 && (
-            <div className="flex flex-col gap-5">
-              <h3 className="text-sm font-bold text-accent uppercase tracking-wider font-outfit mb-2">Step 2: Modus Operandi & Narrative Description</h3>
-              
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-secondary">Case Description / Incident Narrative <span className="text-danger">*</span></label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className={`bg-bg-primary text-text-primary text-xs border rounded-lg p-3 outline-none focus:border-accent h-32 resize-none leading-relaxed ${
-                    errors.description ? 'border-danger' : 'border-border-color'
-                  }`}
-                  placeholder="Provide a detailed official statement of the events. Mention timeline, entry/exit vector, stolen property values, and witness feedback..."
-                  required
-                />
-                <span className="text-[10px] text-text-muted">Minimum 10 characters required. Current length: {formData.description.length}</span>
-                {errors.description && <span className="text-[10px] text-danger font-semibold flex items-center gap-1 mt-0.5"><AlertCircle size={10} /> {errors.description}</span>}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-text-secondary">Modus Operandi (MO) Method Category <span className="text-danger">*</span></label>
-                <textarea
-                  name="mo"
-                  value={formData.mo}
-                  onChange={handleChange}
-                  className={`bg-bg-primary text-text-primary text-xs border rounded-lg p-3 outline-none focus:border-accent h-24 resize-none leading-relaxed ${
-                    errors.mo ? 'border-danger' : 'border-border-color'
-                  }`}
-                  placeholder="Describe specific criminal method. e.g., Relay cloning key-fobs signal scanner; Laser refraction refraction to bypass CCTV feeds; Retail store SIM swap fraud authorization..."
-                  required
-                />
-                <span className="text-[10px] text-text-muted">Minimum 10 characters required. Current length: {formData.mo.length}</span>
-                {errors.mo && <span className="text-[10px] text-danger font-semibold flex items-center gap-1 mt-0.5"><AlertCircle size={10} /> {errors.mo}</span>}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: EVIDENCE & ASSOCIATE LINKS */}
-          {step === 3 && (
-            <div className="flex flex-col gap-5">
-              <h3 className="text-sm font-bold text-accent uppercase tracking-wider font-outfit mb-2">Step 3: Secure Evidence Trails & Suspect Connections</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-text-secondary">Flagged Getaway Vehicles (Registration Plates)</label>
-                  <input
-                    type="text"
-                    name="connectedVehicles"
-                    value={formData.connectedVehicles}
-                    onChange={handleChange}
-                    className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
-                    placeholder="e.g. KA-01-MC-4592, KA-02-JH-1102 (comma separated)"
-                  />
-                  <span className="text-[9px] text-text-muted font-mono">Will link to vehicle database upon ledger entry.</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-text-secondary">Primary Suspect Alias / Name Reference</label>
-                  <input
-                    type="text"
-                    name="suspectAlias"
-                    value={formData.suspectAlias}
-                    onChange={handleChange}
-                    className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
-                    placeholder="e.g. Yashas 'Silt' Kumar"
-                  />
-                  <span className="text-[9px] text-text-muted font-mono">Triggers automatically calculated risk link analysis.</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5 col-span-1 md:col-span-2">
-                  <label className="text-xs font-bold text-text-secondary">Physical / Digital Evidence File Tags</label>
-                  <input
-                    type="text"
-                    name="evidence"
-                    value={formData.evidence}
-                    onChange={handleChange}
-                    className="bg-bg-primary text-text-primary text-xs border border-border-color rounded-lg p-2.5 outline-none focus:border-accent"
-                    placeholder="e.g. Size 9 sneaker footprints, Residual laser refraction, RF signal scans logs (comma separated)"
-                  />
-                  <span className="text-[9px] text-text-muted font-mono">Generates audit verification tags on security audit trail logs.</span>
-                </div>
-              </div>
-
-              {/* Secure Enclave Notice Banner */}
-              <div className="p-3.5 bg-primary-light border border-primary/20 rounded-lg text-xs leading-relaxed text-text-secondary flex gap-2.5 items-start mt-2">
-                <CheckCircle2 size={16} className="text-accent flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-text-primary block mb-0.5">Zoho Catalyst Secure Vault Encryption</span>
-                  This incident entry will be serialized, encrypted using AES-256, and appended to the immutable SCRB ledger. All entry telemetry is tracked in the secure TEE logs.
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Controls Bar */}
-          <div className="flex justify-between items-center border-t border-border-color pt-5 mt-6">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="py-2.5 px-4 bg-bg-tertiary hover:bg-bg-tertiary/80 text-text-secondary hover:text-danger border border-border-color rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Assign Investigating Officer (IO)</label>
+              <select 
+                value={assignedOfficer} 
+                onChange={e => setAssignedOfficer(e.target.value)}
+                className="w-full text-xs p-2.5 border border-slate-300 rounded focus:outline-none bg-white"
               >
-                <Trash2 size={14} /> Clear Form
-              </button>
+                {officersList.map(o => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
             </div>
 
-            <div className="flex gap-3">
-              {step > 1 && (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="py-2.5 px-4 bg-bg-tertiary hover:bg-bg-tertiary/80 border border-border-color rounded-lg text-xs font-semibold text-text-primary flex items-center gap-1.5 transition"
-                >
-                  <ArrowLeft size={14} /> Back
-                </button>
-              )}
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Incident Description & Modus Operandi *</label>
+              <textarea 
+                value={description} 
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Details of the crime, entry points, items stolen, witnesses..."
+                className="w-full text-xs p-2.5 border border-slate-300 rounded h-24 focus:outline-none"
+                required
+              />
+            </div>
 
-              {step < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="py-2.5 px-5 bg-primary hover:bg-primary-hover text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition border border-primary-hover shadow-sm"
-                >
-                  Next Step <ChevronRight size={14} />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="py-2.5 px-5 bg-accent hover:bg-accent-hover text-bg-primary rounded-lg text-xs font-black flex items-center gap-1.5 transition border border-accent-hover shadow-sm"
-                >
-                  <CheckCircle2 size={14} /> Commit Secure Case file
-                </button>
-              )}
+            <button 
+              type="submit" 
+              className="w-full py-2.5 bg-sky-800 hover:bg-sky-900 text-white font-bold rounded text-xs transition-all"
+            >
+              Commit Incident to Ledger
+            </button>
+          </form>
+
+          {/* Inline District Popup Modal */}
+          {showAddDistrict && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-slate-200 p-5 w-80 shadow-lg space-y-3">
+                <h4 className="text-xs font-bold text-slate-800">Add Jurisdiction District</h4>
+                <input 
+                  type="text" 
+                  value={newDistrictName} 
+                  onChange={e => setNewDistrictName(e.target.value)}
+                  placeholder="e.g. Belagavi District"
+                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none"
+                />
+                <div className="flex justify-end gap-2 text-xs">
+                  <button onClick={() => setShowAddDistrict(false)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded">Cancel</button>
+                  <button onClick={handleCreateDistrict} className="px-3 py-1.5 bg-sky-800 text-white font-semibold rounded">Add</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Inline Crime Head Popup Modal */}
+          {showAddCrime && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-slate-200 p-5 w-80 shadow-lg space-y-3">
+                <h4 className="text-xs font-bold text-slate-800">Add Offence Classification Head</h4>
+                <input 
+                  type="text" 
+                  value={newCrimeName} 
+                  onChange={e => setNewCrimeName(e.target.value)}
+                  placeholder="e.g. Cyber Ransomware"
+                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none"
+                />
+                <div className="flex justify-end gap-2 text-xs">
+                  <button onClick={() => setShowAddCrime(false)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded">Cancel</button>
+                  <button onClick={handleCreateCrime} className="px-3 py-1.5 bg-sky-800 text-white font-semibold rounded">Add</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Filters Panel */}
+          <div className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative max-w-xs flex-1 w-full">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Search registered cases..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-slate-300 rounded text-xs w-full focus:outline-none focus:border-sky-800"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 w-full sm:w-auto">
+                <Calendar size={14} className="text-slate-400" />
+                <span className="whitespace-nowrap">From:</span>
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={e => setStartDate(e.target.value)}
+                  className="border border-slate-300 rounded p-1 text-xs w-full"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 w-full sm:w-auto">
+                <Calendar size={14} className="text-slate-400" />
+                <span className="whitespace-nowrap">To:</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={e => setEndDate(e.target.value)}
+                  className="border border-slate-300 rounded p-1 text-xs w-full"
+                />
+              </div>
             </div>
           </div>
-        </form>
-      </div>
 
-      {/* Confirmation Dialog Modal */}
-      {showConfirmReset && (
-        <div className="fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
-          <div className="bg-bg-secondary border border-border-color rounded-xl max-w-sm w-full p-5 shadow-lg animate-scale-in">
-            <h3 className="text-base font-bold font-outfit text-text-primary mb-2 flex items-center gap-1.5">
-              <AlertCircle size={18} className="text-danger" /> Clear Case Draft?
-            </h3>
-            <p className="text-xs text-text-secondary leading-relaxed mb-5">
-              Are you sure you want to clear this case file draft? All input details will be permanently removed from the local cache storage.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowConfirmReset(false)}
-                className="py-2 px-4 bg-bg-tertiary hover:bg-bg-tertiary/80 border border-border-color rounded-lg text-xs font-semibold text-text-primary transition"
+          {/* Cases List */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredIncidents.map(inc => (
+              <div key={inc.id} className="bg-white rounded-lg border border-slate-200 p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-mono font-bold text-sky-800 px-2 py-0.5 bg-sky-50 rounded">
+                      {inc.id}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      inc.status === 'Solved' ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' :
+                      inc.status === 'Under Investigation' ? 'bg-amber-50 text-amber-800 border border-amber-100' :
+                      'bg-slate-50 text-slate-800 border border-slate-200'
+                    }`}>
+                      {inc.status}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-slate-800 mb-1">{inc.title}</h4>
+                  <p className="text-[11px] text-slate-400 mb-3 font-mono">Date: {new Date(inc.date).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 line-clamp-3 mb-4 leading-relaxed">{inc.description}</p>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-xs text-slate-600">
+                  <div className="flex items-center gap-1.5">
+                    <UserCheck size={14} className="text-slate-400" />
+                    <span>Assignee: <strong className="text-slate-700">{inc.assignedOfficer}</strong></span>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setSelectedIncidentForUpdate(inc);
+                      setUpdateOfficer(inc.assignedOfficer);
+                      setUpdateStatus(inc.status);
+                    }}
+                    className="text-xs font-bold text-sky-800 hover:underline flex items-center gap-0.5"
+                  >
+                    Update Status & Assign
+                  </button>
+                </div>
+
+                {inc.proofDocument && (
+                  <div className="mt-3 p-2 bg-emerald-50/50 rounded border border-emerald-100/50 text-[10px] text-emerald-800 flex items-center gap-2">
+                    <FileText size={12} />
+                    <span>Proof: <strong>{inc.proofDocument}</strong> - {inc.resolutionSummary}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Update Assignment & Solved Workflow Modal */}
+      {selectedIncidentForUpdate && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg border border-slate-200 p-6 w-96 shadow-lg space-y-4">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800">Case Update: {selectedIncidentForUpdate.id}</h4>
+              <p className="text-xs text-slate-400 mt-0.5">Assign officer, update status, and attach proof documents.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">Assign Officer</label>
+                <select 
+                  value={updateOfficer} 
+                  onChange={e => setUpdateOfficer(e.target.value)}
+                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none bg-white"
+                >
+                  {officersList.map(o => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-1">Investigation Status</label>
+                <select 
+                  value={updateStatus} 
+                  onChange={e => setUpdateStatus(e.target.value as any)}
+                  className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none bg-white"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Under Investigation">Under Investigation</option>
+                  <option value="Solved">Solved</option>
+                </select>
+              </div>
+
+              {updateStatus === 'Solved' && (
+                <div className="space-y-3 animate-fadeIn">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Resolution Summary *</label>
+                    <input 
+                      type="text"
+                      value={resolutionSummary}
+                      onChange={e => setResolutionSummary(e.target.value)}
+                      placeholder="e.g. Stolen gold recovered, suspects arrested"
+                      className="w-full text-xs p-2 border border-slate-300 rounded focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 mb-1">Upload Case Closure Proof (PDF/Image)</label>
+                    <div className="border border-dashed border-slate-300 rounded p-3 text-center bg-slate-50 hover:bg-slate-100 transition-colors relative cursor-pointer">
+                      <input 
+                        type="file" 
+                        onChange={e => setProofFile(e.target.files?.[0]?.name || 'ksp_closure_report.pdf')}
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                      />
+                      <UploadCloud className="h-6 w-6 text-slate-400 mx-auto mb-1" />
+                      <span className="text-[10px] text-slate-500 font-bold block">
+                        {proofFile ? `Selected: ${proofFile}` : "Click to select closure report"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 text-xs pt-2">
+              <button 
+                onClick={() => setSelectedIncidentForUpdate(null)} 
+                className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded"
               >
-                No, Keep Draft
+                Cancel
               </button>
-              <button
-                onClick={confirmResetAction}
-                className="py-2 px-4 bg-danger hover:bg-danger/90 text-white rounded-lg text-xs font-bold transition"
+              <button 
+                onClick={handleUpdateIncident} 
+                className="px-3 py-1.5 bg-sky-800 text-white font-semibold rounded hover:bg-sky-900"
               >
-                Yes, Clear Draft
+                Save Changes
               </button>
             </div>
           </div>

@@ -4,11 +4,9 @@
     "ignore": []
   },
   "functions": {
+    "source": "functions",
     "targets": [
-      {
-        "name": "api",
-        "path": "functions/api"
-      }
+      "crimeinteligenceai_function"
     ]
   }
 }

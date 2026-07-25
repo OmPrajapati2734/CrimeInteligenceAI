@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "43556000000021001",
+      "name": "CrimeInteligenceAI",
+      "domain": {
+        "id": "50043862439",
+        "name": "crimeinteligenceai-60075829466.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60075829466",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}

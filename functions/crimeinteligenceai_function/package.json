@@ -1,0 +1,9 @@
+{
+	"name": "crimeinteligenceai_function",
+	"version": "1.0.0",
+	"main": "index.js",
+	"author": "omprajapati2734@gmail.com",
+	"dependencies": {
+		"zcatalyst-sdk-node": "latest"
+	}
+}

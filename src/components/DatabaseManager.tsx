@@ -190,13 +190,21 @@ export default function DatabaseManager() {
 
       {/* Notifications */}
       {notification && (
-        <div className={`p-4 rounded-md flex items-center gap-3 border ${
+        <div className={`p-4 rounded-md flex items-center justify-between gap-3 border ${
           notification.type === 'success' 
             ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
             : 'bg-rose-50 border-rose-200 text-rose-800'
         }`}>
-          <AlertCircle className="h-5 w-5" />
-          <span className="text-sm font-medium">{notification.message}</span>
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <span className="text-sm font-medium">{notification.message}</span>
+          </div>
+          <button 
+            onClick={() => setNotification(null)}
+            className="text-sm font-bold opacity-60 hover:opacity-100 px-1"
+          >
+            ×
+          </button>
         </div>
       )}
 

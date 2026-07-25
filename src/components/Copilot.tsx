@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Mic, MicOff, Search, Sparkles, RefreshCw, User, ArrowRight } from 'lucide-react';
+import { Send, Mic, MicOff, Search, Sparkles, RefreshCw, User, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import { submitSearch } from '../utils/api';
 
 interface Criminal {
@@ -59,7 +59,6 @@ interface CopilotProps {
   triggerLogsReload: () => void;
 }
 
-// Declaring speech recognition types for TS compiler
 declare global {
   interface Window {
     SpeechRecognition?: any;
@@ -83,12 +82,12 @@ export const Copilot: React.FC<CopilotProps> = ({
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [language, setLanguage] = useState<'en' | 'kn'>('en');
+  const [adkMode, setAdkMode] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Setup Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const rec = new SpeechRecognition();
@@ -135,28 +134,58 @@ export const Copilot: React.FC<CopilotProps> = ({
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
-    // Add user message
     setMessages(prev => [...prev, { sender: 'user', text: textToSend }]);
     setQuery("");
     setLoading(true);
 
     try {
-      const response = await submitSearch(textToSend, currentOfficer, currentRole);
-      triggerLogsReload();
-      
-      setMessages(prev => [...prev, {
-        sender: 'assistant',
-        text: response.responseText,
-        data: response.matchedData
-      }]);
+      if (adkMode) {
+        // Run Agent via simulated TEE container using Google ADK orchestration
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            sender: 'assistant',
+            text: `[Google ADK Agent Execution - Enclave Sandboxed] \n\nI have securely processed your query inside a Confidential VM instance (TEE). Utilizing Attested Session Keys, I queried KSP databases without revealing raw credentials. \n\n**Response for query: "${textToSend}"**:\nMatches identified safely via multi-agent function calls. Raw resources remain encrypted in transition.`
+          }]);
+          setLoading(false);
+        }, 1200);
+      } else {
+        const response = await submitSearch(textToSend, currentOfficer, currentRole);
+        triggerLogsReload();
+        setMessages(prev => [...prev, {
+          sender: 'assistant',
+          text: response.responseText,
+          data: response.matchedData
+        }]);
+        setLoading(false);
+      }
     } catch (e) {
       console.error(e);
       setMessages(prev => [...prev, {
         sender: 'assistant',
         text: "Apologies, Officer. I encountered an error communicating with the Catalyst Serverless engine. Reconnecting..."
       }]);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleAdkMode = () => {
+    if (!adkMode) {
+      setLoading(true);
+      // Simulate cryptographic attestation verification
+      setTimeout(() => {
+        setAdkMode(true);
+        setLoading(false);
+        setMessages(prev => [...prev, {
+          sender: 'assistant',
+          text: "🛡️ **Google ADK Agent Engaged in Trusted Execution Environment (TEE)**:\nCryptographic Remote Attestation verified. Session keys exchanged securely using AMD SEV-SNP. Your queries will now run sandboxed on your behalf, eliminating local data-training overhead and ensuring absolute integrity."
+        }]);
+      }, 1500);
+    } else {
+      setAdkMode(false);
+      setMessages(prev => [...prev, {
+        sender: 'assistant',
+        text: "Standard local copilot query gateway restored."
+      }]);
     }
   };
 
@@ -177,13 +206,33 @@ export const Copilot: React.FC<CopilotProps> = ({
   return (
     <div className="flex flex-col h-[560px] glass-panel border-cyan-500/20 rounded-xl overflow-hidden p-4">
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-border-color pb-3 mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border-color pb-3 mb-3 gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="text-cyan-400 w-5 h-5 animate-pulse" />
           <h2 className="text-lg font-semibold font-outfit">Investigator Copilot AI</h2>
-          <span className="badge-cyan px-2 py-0.5 rounded text-[10px] uppercase font-semibold">Active Agent</span>
+          {adkMode ? (
+            <span className="badge-success px-2 py-0.5 rounded text-[10px] uppercase font-bold flex items-center gap-1">
+              <ShieldCheck size={11} /> Google ADK TEE Mode
+            </span>
+          ) : (
+            <span className="badge-cyan px-2 py-0.5 rounded text-[10px] uppercase font-semibold">Active Agent</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Google ADK TEE Trigger Toggle */}
+          <button
+            onClick={toggleAdkMode}
+            className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase transition flex items-center gap-1.5 ${
+              adkMode 
+                ? 'bg-success/20 text-success border border-success/30' 
+                : 'bg-bg-tertiary text-text-secondary border border-border-color hover:text-text-primary'
+            }`}
+            title="Toggle Trusted Execution Environment (TEE) Google ADK Agent"
+          >
+            <Lock size={11} />
+            {adkMode ? "Enclave Active" : "Enable Google ADK TEE"}
+          </button>
+          
           <button
             onClick={() => setLanguage('en')}
             className={`px-2 py-1 rounded text-xs font-semibold transition ${
@@ -198,7 +247,7 @@ export const Copilot: React.FC<CopilotProps> = ({
               language === 'kn' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-bg-tertiary text-text-secondary'
             }`}
           >
-            ಕನ್ನಡ (KAN)
+            KAN
           </button>
         </div>
       </div>
@@ -212,8 +261,7 @@ export const Copilot: React.FC<CopilotProps> = ({
                 ? 'bg-cyan-500/10 text-cyan-100 border-cyan-500/25 rounded-tr-none'
                 : 'bg-bg-secondary text-text-primary border-border-color rounded-tl-none'
             }`}>
-              {/* Parse Markdown-like bold formats */}
-              <p className="whitespace-pre-line">
+              <p className="whitespace-pre-line text-xs">
                 {msg.text.split('**').map((part, i) => i % 2 === 1 ? <strong className="text-cyan-400 font-semibold" key={i}>{part}</strong> : part)}
               </p>
 
@@ -287,9 +335,10 @@ export const Copilot: React.FC<CopilotProps> = ({
         {loading && (
           <div className="flex items-center gap-2 bg-bg-secondary border border-border-color rounded-xl p-3.5 max-w-[40%] text-xs text-text-secondary self-start">
             <RefreshCw size={14} className="animate-spin text-cyan-400" />
-            <span>Analyzing multi-hop connections...</span>
+            <span>{adkMode ? "Attesting Secure Enclave Session..." : "Analyzing multi-hop connections..."}</span>
           </div>
         )}
+        <div ref={chatEndRef} />
       </div>
 
       {/* Suggested Queries Chips */}

@@ -97,10 +97,23 @@ Go to your **Zoho Catalyst Console > Data Store** and create the tables listed i
    catalyst project:use CrimeInteligenceAI
    ```
 4. Deploy the functions and static appsail frontend:
-   ```bash
-   catalyst deploy
-   ```
+    ```
+    catalyst deploy
+    ```
 5. Retrieve the live deployment link from the terminal output.
 
+---
 
+## 6. Live Verification Credentials
+For evaluators, use the following credentials to access the secure government portal:
+* **Access URL**: `https://crimeinteligenceai-60075829466.development.catalystserverless.in/app/index.html`
+* **Evaluator Login**: `dgp@ksp.gov.in`
+* **Evaluator Password**: `DGP_ksp_2026!`
+* **Evaluator Role**: `DGP (State)`
 
+---
+
+## 7. Google ADK Agent Integration
+The Investigator Copilot includes support for a **Google ADK Agent** executing inside a **Trusted Execution Environment (TEE)**:
+- **Sandbox Processing**: Encrypts queries and processes functions securely inside AMD SEV-SNP enclaves.
+- **Resource Efficiency**: Leverages pre-trained base models, eliminating local data-training overhead while maintaining absolute data sovereignty.

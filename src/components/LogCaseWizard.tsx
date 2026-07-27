@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FilePlus2, Plus, Calendar, Search, 
-  UserCheck, UploadCloud, FileText, Sparkles, Users 
+  UserCheck, UploadCloud, FileText, Sparkles, Users, Bell, ShieldCheck, Mail
 } from 'lucide-react';
 
 interface IncidentCase {
@@ -11,7 +11,7 @@ interface IncidentCase {
   district: string;
   station: string;
   crimeType: string;
-  status: 'Pending' | 'Under Investigation' | 'Solved';
+  status: string;
   assignedOfficer: string;
   description: string;
   proofDocument?: string;
@@ -23,6 +23,16 @@ interface Inspector {
   name: string;
   station: string;
   rank: string;
+}
+
+interface AlertLog {
+  id: string;
+  caseId: string;
+  officer: string;
+  message: string;
+  phase: string;
+  timestamp: string;
+  deliveryStatus: 'Sent' | 'Delivered' | 'Read';
 }
 
 const initialIncidents: IncidentCase[] = [
@@ -56,13 +66,26 @@ const initialInspectors: Inspector[] = [
   { badgeNo: "KSP-9910", name: "DSP Kavitha Patil", station: "Bengaluru East", rank: "Deputy Superintendent" }
 ];
 
+const initialAlertLogs: AlertLog[] = [
+  {
+    id: "AL-7712",
+    caseId: "FIR-2026-102",
+    officer: "Inspector H. S. Rao",
+    message: "New case assignment: Commercial Burglary at Gold Jewellers",
+    phase: "Under Investigation",
+    timestamp: "2026-07-24 22:45",
+    deliveryStatus: "Read"
+  }
+];
+
 export const LogCaseWizard: React.FC<{
   onSuccess: (newCase: any) => void;
   showNotification: (msg: string, type: 'success' | 'warning' | 'danger' | 'info') => void;
 }> = ({ onSuccess, showNotification }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'create' | 'list' | 'inspectors'>('create');
+  const [activeSubTab, setActiveSubTab] = useState<'create' | 'list' | 'inspectors' | 'alerts'>('create');
   const [incidents, setIncidents] = useState<IncidentCase[]>(initialIncidents);
   const [inspectors, setInspectors] = useState<Inspector[]>(initialInspectors);
+  const [dispatchLogs, setDispatchLogs] = useState<AlertLog[]>(initialAlertLogs);
 
   // Date Filters
   const [startDate, setStartDate] = useState('');
@@ -84,9 +107,10 @@ export const LogCaseWizard: React.FC<{
   const [newStation, setNewStation] = useState('');
   const [newRank, setNewRank] = useState('Circle Inspector');
 
-  // Dynamic registers
+  // Dynamic registers & dynamic phases
   const [districtsList, setDistrictsList] = useState<string[]>(["Bengaluru City", "Mysuru City", "Hubballi-Dharwad", "Belagavi"]);
   const [crimeTypeList, setCrimeTypeList] = useState<string[]>(["Burglary", "Snatching", "Cyber Fraud", "Assault", "Vehicle Theft"]);
+  const [phasesList, setPhasesList] = useState<string[]>(["Pending", "Under Investigation", "Evidence Gathered", "Arrest Made", "Solved", "Case Re-opened"]);
 
   // Inline Add Popups
   const [showAddDistrict, setShowAddDistrict] = useState(false);
@@ -95,10 +119,12 @@ export const LogCaseWizard: React.FC<{
   const [showAddCrime, setShowAddCrime] = useState(false);
   const [newCrimeName, setNewCrimeName] = useState('');
 
+  const [newPhaseName, setNewPhaseName] = useState('');
+
   // Assign & Solved Modal Settings
   const [selectedIncidentForUpdate, setSelectedIncidentForUpdate] = useState<IncidentCase | null>(null);
   const [updateOfficer, setUpdateOfficer] = useState('Unassigned');
-  const [updateStatus, setUpdateStatus] = useState<'Pending' | 'Under Investigation' | 'Solved'>('Pending');
+  const [updateStatus, setUpdateStatus] = useState('Pending');
   const [proofFile, setProofFile] = useState<string>('');
   const [resolutionSummary, setResolutionSummary] = useState('');
 
@@ -126,6 +152,17 @@ export const LogCaseWizard: React.FC<{
     setNewCrimeName('');
     setShowAddCrime(false);
     showNotification("New crime classification head added.", "success");
+  };
+
+  const handleCreatePhase = () => {
+    if (!newPhaseName.trim()) return;
+    if (phasesList.includes(newPhaseName.trim())) {
+      showNotification("Phase already exists.", "warning");
+      return;
+    }
+    setPhasesList(prev => [...prev, newPhaseName.trim()]);
+    setNewPhaseName('');
+    showNotification("New dynamic case phase registered.", "success");
   };
 
   const handleAddInspector = (e: React.FormEvent) => {
@@ -159,8 +196,9 @@ export const LogCaseWizard: React.FC<{
       return;
     }
 
+    const caseId = `FIR-2026-${Math.floor(Math.random() * 900 + 100)}`;
     const newFIRCases: IncidentCase = {
-      id: `FIR-2026-${Math.floor(Math.random() * 900 + 100)}`,
+      id: caseId,
       title,
       date,
       district,
@@ -173,6 +211,21 @@ export const LogCaseWizard: React.FC<{
 
     setIncidents(prev => [newFIRCases, ...prev]);
     onSuccess(newFIRCases);
+
+    // Auto-alert dispatch
+    if (assignedOfficer !== 'Unassigned') {
+      const newAlert: AlertLog = {
+        id: `AL-${Math.floor(1000 + Math.random() * 9000)}`,
+        caseId: caseId,
+        officer: assignedOfficer,
+        message: `Assigned as Lead IO for case: ${title}`,
+        phase: "Pending",
+        timestamp: new Date().toLocaleString(),
+        deliveryStatus: "Delivered"
+      };
+      setDispatchLogs(prev => [newAlert, ...prev]);
+    }
+
     showNotification(`New incident ${newFIRCases.id} logged securely.`, "success");
 
     // Reset Form
@@ -198,6 +251,22 @@ export const LogCaseWizard: React.FC<{
       return inc;
     }));
 
+    // Alert dispatch logger on updates
+    const alertMessage = updateOfficer !== selectedIncidentForUpdate.assignedOfficer
+      ? `Assigned as Lead IO for Case file ${selectedIncidentForUpdate.id}`
+      : `Case file ${selectedIncidentForUpdate.id} investigation phase updated to '${updateStatus}'`;
+
+    const newAlert: AlertLog = {
+      id: `AL-${Math.floor(1000 + Math.random() * 9000)}`,
+      caseId: selectedIncidentForUpdate.id,
+      officer: updateOfficer !== 'Unassigned' ? updateOfficer : "Duty Desk",
+      message: alertMessage,
+      phase: updateStatus,
+      timestamp: new Date().toLocaleString(),
+      deliveryStatus: "Delivered"
+    };
+
+    setDispatchLogs(prev => [newAlert, ...prev]);
     showNotification(`Case assignment details for ${selectedIncidentForUpdate.id} updated.`, "success");
     setSelectedIncidentForUpdate(null);
     setProofFile('');
@@ -244,6 +313,14 @@ export const LogCaseWizard: React.FC<{
             }`}
           >
             Inspectors Roster ({inspectors.length})
+          </button>
+          <button 
+            onClick={() => setActiveSubTab('alerts')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeSubTab === 'alerts' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-bg-tertiary text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            Duty Alerts Console ({dispatchLogs.length})
           </button>
         </div>
       </div>
@@ -599,6 +676,76 @@ export const LogCaseWizard: React.FC<{
         </div>
       )}
 
+      {activeSubTab === 'alerts' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Add custom status phases form */}
+          <div className="lg:col-span-1 glass-panel border-cyan-500/20 p-5 space-y-4">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border-color pb-2.5 font-outfit">
+              <Plus className="text-cyan-400" size={16} /> Add Dynamic Case Phase
+            </h3>
+            <p className="text-[10px] text-text-secondary">Create a custom phase rule to configure alerts dynamically based on investigation needs.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-text-secondary mb-1">Phase Title *</label>
+                <input 
+                  type="text" 
+                  value={newPhaseName} 
+                  onChange={e => setNewPhaseName(e.target.value)}
+                  placeholder="e.g. Evidence Logged"
+                  className="w-full text-xs p-2 bg-bg-secondary text-text-primary border border-border-color rounded focus:outline-none"
+                />
+              </div>
+              <button 
+                onClick={handleCreatePhase}
+                className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-bg-primary font-bold rounded-lg text-xs transition"
+              >
+                Register Phase Rule
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-border-color/30">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2 font-mono">Active Phase Rules</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {phasesList.map(phase => (
+                  <span key={phase} className="text-[9px] font-bold badge-cyan px-2 py-0.5 rounded border border-cyan-500/10">{phase}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts dispatch logs */}
+          <div className="lg:col-span-2 glass-panel border-cyan-500/20 p-5 space-y-4">
+            <h3 className="text-sm font-bold text-text-primary flex items-center gap-2 border-b border-border-color pb-2.5 font-outfit">
+              <Bell className="text-cyan-400" size={16} /> Real-time Alert Notification dispatch
+            </h3>
+            
+            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+              {dispatchLogs.map(log => (
+                <div key={log.id} className="p-3 bg-bg-secondary/40 border border-border-color/60 rounded-lg flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="badge-pink text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">{log.caseId}</span>
+                      <span className="text-[9px] badge-amber px-1.5 py-0.5 rounded font-bold font-mono">{log.phase}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-text-primary">{log.message}</p>
+                    <p className="text-[10px] text-text-muted">Notified: <strong className="text-text-secondary">{log.officer}</strong> • {log.timestamp}</p>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <span className="text-[9px] px-2 py-0.5 rounded font-bold bg-success/10 text-success border border-success/15 flex items-center gap-1">
+                      <ShieldCheck size={10} /> {log.deliveryStatus}
+                    </span>
+                    <span className="text-[8px] text-text-muted flex items-center gap-0.5">
+                      <Mail size={8} /> SMS / Push Sync
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Update Assignment & Solved Workflow Modal */}
       {selectedIncidentForUpdate && (
         <div className="fixed inset-0 bg-bg-primary/65 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -624,15 +771,15 @@ export const LogCaseWizard: React.FC<{
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-text-secondary mb-1">Investigation Status</label>
+                <label className="block text-[10px] font-bold text-text-secondary mb-1">Investigation Phase (Status)</label>
                 <select 
                   value={updateStatus} 
                   onChange={e => setUpdateStatus(e.target.value as any)}
                   className="w-full text-xs p-2 bg-bg-secondary text-text-primary border border-border-color rounded focus:outline-none"
                 >
-                  <option value="Pending" className="bg-bg-secondary">Pending</option>
-                  <option value="Under Investigation" className="bg-bg-secondary">Under Investigation</option>
-                  <option value="Solved" className="bg-bg-secondary">Solved</option>
+                  {phasesList.map(p => (
+                    <option key={p} value={p} className="bg-bg-secondary">{p}</option>
+                  ))}
                 </select>
               </div>
 

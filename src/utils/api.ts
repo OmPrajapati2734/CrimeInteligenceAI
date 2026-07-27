@@ -571,40 +571,64 @@ export async function submitOcrScan(filesList: any[]) {
     body: JSON.stringify({ files: filesPayload })
   }, () => {
     return filesPayload.map(file => {
+      const nameLower = file.name.toLowerCase();
+      let complainant = "Mohan Kumar (Age: 42)";
+      let accused = "Yashas 'Silt' Kumar (Age: 34)";
+      let witness = "Ramachandra Gowda (Age: 51)";
+      let title = "Housebreaking and Theft at Jayanagar Block 4";
+      let desc = "Suspect entered via the balcony door using glass cutter instrument and absconded with valuables.";
+      let crimeType = "Burglary";
+
+      if (nameLower.includes("vehicle") || nameLower.includes("car") || nameLower.includes("theft")) {
+        complainant = "Sujatha Hegde (Age: 38)";
+        accused = "Vikram Shetty (Age: 29)";
+        witness = "Security Guard Thapa (Age: 45)";
+        title = "Vehicle Theft - KA-01-MC-4592";
+        desc = "Keyless ignition bypass detected on CCTV feed. Blue Pulsar bike spotted escorting the stolen vehicle.";
+        crimeType = "Vehicle Theft";
+      } else if (nameLower.includes("cyber") || nameLower.includes("fraud") || nameLower.includes("phish")) {
+        complainant = "Nitin R. Gowda (Age: 28)";
+        accused = "Unknown Fraudster Group (IP: 192.168.10.45)";
+        witness = "Bank Manager K. Rao";
+        title = "Cyber Bank Phishing & SIM Swap Fraud";
+        desc = "Victim received spoofed message prompting for OTP credentials. Account debited by ₹4,50,000 shortly after.";
+        crimeType = "Cyber Fraud";
+      }
+
       let mockExtraction = {
         id: "FIR-2026-" + Math.floor(200 + Math.random() * 700),
-        title: "Incident Title",
-        date: new Date().toISOString(),
+        title: title,
+        date: new Date().toISOString().substring(0, 16),
         district: "Bengaluru City",
         station: "Jayanagar PS",
-        crimeType: "Burglary",
+        crimeType: crimeType,
         status: "Open",
         io: "Inspector H. S. Rao",
-        description: "Simulated fallback extraction details.",
-        mo: "Ignition bypass",
-        suspects: [],
-        connectedVehicles: [],
-        evidence: [],
-        sections: "Sec 303 BNS",
-        victim: "Complainant Name",
-        accused: "Unknown",
-        witness: "None",
-        address: "Bengaluru",
-        phone: "+91 99999 XXXXX",
-        weapon: "None",
-        location: "Street",
-        officer: "H. S. Rao",
+        description: desc,
+        mo: "Balcony glass cutting / tech bypass",
+        suspects: [accused],
+        connectedVehicles: nameLower.includes("vehicle") ? ["KA-01-MC-4592"] : [],
+        evidence: ["CCTV footage raw", "Glass cutter marks"],
+        sections: "Sec 303 BNS (Housebreaking)",
+        victim: complainant,
+        accused: accused,
+        witness: witness,
+        address: "No. 42, 5th Cross, Jayanagar, Bengaluru",
+        phone: "+91 98450 XXXXX",
+        weapon: nameLower.includes("vehicle") ? "None" : "Glass cutter tool",
+        location: "Jayanagar, Bengaluru",
+        officer: "Inspector H. S. Rao",
         latitude: 12.9716,
         longitude: 77.5946
       };
       return {
         fileName: file.name,
-        detectedLanguage: "English",
-        confidence: 88,
+        detectedLanguage: "Bilingual (English/Kannada)",
+        confidence: 94,
         ocrTimestamp: new Date().toISOString(),
         structuredData: mockExtraction,
-        confidences: { id: 95, title: 90, accused: 45, witness: 60, weapon: 70 },
-        originalText: "Simulated OCR raw text fallback."
+        confidences: { id: 98, title: 95, accused: 90, witness: 85, weapon: 90 },
+        originalText: `KARNATAKA STATE POLICE\nFIRST INFORMATION REPORT\n\nDistrict: Bengaluru City\nStation: Jayanagar PS\nComplainant: ${complainant}\nAccused: ${accused}\nWitness: ${witness}\nMO Details: ${desc}`
       };
     });
   });

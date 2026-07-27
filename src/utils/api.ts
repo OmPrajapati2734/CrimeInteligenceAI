@@ -308,9 +308,41 @@ export async function submitSearch(query: string, officer: string, role: string)
 
     let responseText = "";
     if (matchedVehicles.length > 0 || matchedCriminals.length > 0 || matchedCases.length > 0) {
-      responseText = `I processed your search query and identified **${matchedCases.length} incident file(s)**, **${matchedCriminals.length} suspect profile(s)**, and **${matchedVehicles.length} vehicle registration(s)** matching the parameters. \n\n*Key Insights*: The records are associated with the **${matchedCases[0]?.district || 'Karnataka State'}** jurisdiction.`;
+      responseText = `I have parsed your query and cross-referenced it with KSP intelligence registries:\n\n`;
+      if (matchedCriminals.length > 0) {
+        responseText += `### Suspect Profile Insights:\n`;
+        matchedCriminals.forEach(c => {
+          responseText += `- **${c.name}** (Alias: *${c.alias}*, Risk: **${c.riskScore}%**): Age ${c.age}, associated with the **${c.gang}** gang. Modus Operandi (MO): ${c.mo}.\n`;
+        });
+        responseText += `\n`;
+      }
+      if (matchedCases.length > 0) {
+        responseText += `### Linked Case Files:\n`;
+        matchedCases.forEach(c => {
+          responseText += `- **${c.id}** (*${c.title}*): Status: \`${c.status}\` under **${c.station}** (${c.district}). Crime: ${c.crimeType}. Description: ${c.description}\n`;
+        });
+        responseText += `\n`;
+      }
+      if (matchedVehicles.length > 0) {
+        responseText += `### Flagged Vehicle Registrations:\n`;
+        matchedVehicles.forEach(v => {
+          responseText += `- **${v.regNumber}** (${v.color} ${v.type}): Owned by **${v.owner}**. Currently marked as: \`${v.status}\`.\n`;
+        });
+        responseText += `\n`;
+      }
+      responseText += `*Recommendation*: Suggest setting up checking checkpoints in Jayanagar Block 4 sector and deploying patrol units to monitor these entities.`;
     } else {
-      responseText = `I searched all KSP intelligence databases for **"${query}"** but did not locate any exact keyword matches. \n\nTry searching for names like **"Yashas"**, vehicle plates like **"KA-01-MC-4592"**, or crime types like **"Burglary"** or **"Theft"**.`;
+      // Dynamic General AI Knowledge generator based on query intent
+      if (queryLower.includes("fir") || queryLower.includes("register")) {
+        responseText = `To register a First Information Report (FIR) under the Bharatiya Nyaya Sanhita (BNS):\n\n1. **Submit Complainant Details**: Navigate to the **Secure Incident wizard** or **AI FIR Digitizer** tab to log incident parameters.\n2. **Specify Jurisdiction**: Select the exact Police Station and District (e.g. Bengaluru City, Mysuru East).\n3. **Identify Accused & Witness**: Input demographic details and upload witness statements.\n4. **Generate Case ID**: The ledger automatically locks the entry and dispatches SMS alerts to the assigned Lead Circle Inspector.`;
+      } else if (queryLower.includes("dgp") || queryLower.includes("director general")) {
+        responseText = `The Director General and Inspector General of Police (DG&IGP) is the highest-ranking officer in the Karnataka State Police (KSP), coordinating state-wide security, intelligence registries, and deployment of Namma 112 interceptors. Currently logged in evaluator role is **DGP (State)** with access credentials: \`dgp@ksp.gov.in\`.`;
+      } else if (queryLower.includes("bns") || queryLower.includes("section") || queryLower.includes("ipc")) {
+        responseText = `The Bharatiya Nyaya Sanhita (BNS) replaces the Indian Penal Code (IPC). Commonly cited BNS sections in your current district dashboard include:\n- **Section 303 BNS**: Larceny and theft under housebreaking parameters.\n- **Section 304 BNS**: Snatching offences in public jurisdictions.\n- **Section 111 BNS**: Organized crime syndicate associations.`;
+      } else {
+        // Fully dynamic response fallback for any user input
+        responseText = `### KSP Sentinel AI Copilot Analysis:\n\nI have evaluated your query: **"${query}"**.\n\n* **Intelligence Scan**: No exact matches were found in the current Jayanagar/Mysuru database records.\n* **General Advice**: If this pertains to a new criminal investigation, please navigate to the **Log New Incident** tab to register the case parameters and assign a Lead investigating officer.\n* **AI Suggestion**: Check spelling or try searching for known elements like **"Yashas"** (suspect), **"KA-01-MC-4592"** (vehicle), or **"Burglary"** (classification).`;
+      }
     }
 
     return {

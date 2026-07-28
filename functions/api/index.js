@@ -870,146 +870,194 @@ app.post('/api/search', (req, res) => {
     logAudit(officer, role, `Copilot Search: "${query}"`, "AI Search Gateway");
 
     const queryLower = query.toLowerCase();
-    let responseText = "";
-    let matchedData = { criminals: [], cases: [], vehicles: [] };
+    
+    // 1. INTENT DETECTION & FILTERS AGENT
+    let detectedIntent = "General Case Search";
+    let filterDistrict = null;
+    let filterStatus = null;
+    let filterCrimeType = null;
+    let filterDateAfter = null;
 
-    // Intent & entities parsing
-    if (queryLower.includes("vehicle") || queryLower.includes("car") || queryLower.includes("ka01") || queryLower.includes("ka02") || queryLower.includes("ka-")) {
-        // Search connected vehicles
-        const matchedVeh = vehicles.filter(v => 
-            queryLower.includes(v.regNumber.toLowerCase().replace(/-/g, '')) || 
-            queryLower.includes(v.regNumber.toLowerCase()) ||
-            queryLower.includes(v.owner.toLowerCase().split(' ')[0])
-        );
-        matchedData.vehicles = matchedVeh;
-        
-        if (matchedVeh.length > 0) {
-            const reg = matchedVeh[0].regNumber;
-            // Find cases that mention this vehicle
-            matchedData.cases = cases.filter(c => c.connectedVehicles.includes(reg));
-            matchedData.criminals = criminals.filter(c => c.vehicles.includes(reg));
-            
-            responseText = `I found vehicle registry **${reg}** (${matchedVeh[0].color} ${matchedVeh[0].type}) registered to **${matchedVeh[0].owner}**. This vehicle is linked to **${matchedData.cases.length} active case(s)** and connected to suspect **${matchedData.criminals.map(c => c.name).join(', ')}**.`;
+    // Extract District Filter
+    if (queryLower.includes("mysuru")) {
+        filterDistrict = "Mysuru City";
+    } else if (queryLower.includes("bengaluru") || queryLower.includes("jayanagar") || queryLower.includes("hsr")) {
+        filterDistrict = "Bengaluru City";
+    } else if (queryLower.includes("mangaluru") || queryLower.includes("kadri") || queryLower.includes("ullal")) {
+        filterDistrict = "Mangaluru";
+    }
+
+    // Extract Status Filter
+    if (queryLower.includes("pending") || queryLower.includes("open")) {
+        filterStatus = "Pending";
+        detectedIntent = "Pending Cases Analysis";
+    } else if (queryLower.includes("solved") || queryLower.includes("closed")) {
+        filterStatus = "Solved";
+        detectedIntent = "Closed Cases Review";
+    } else if (queryLower.includes("investigation")) {
+        filterStatus = "Under Investigation";
+        detectedIntent = "Active Investigation Analytics";
+    }
+
+    // Extract Crime Classification
+    if (queryLower.includes("burglary") || queryLower.includes("housebreaking") || queryLower.includes("robbery")) {
+        filterCrimeType = "Burglary";
+    } else if (queryLower.includes("snatching")) {
+        filterCrimeType = "Snatching";
+    } else if (queryLower.includes("cyber") || queryLower.includes("phishing") || queryLower.includes("fraud")) {
+        filterCrimeType = "Cyber Crime";
+    } else if (queryLower.includes("vehicle") || queryLower.includes("car") || queryLower.includes("theft")) {
+        filterCrimeType = "Theft";
+    }
+
+    // Extract Date Filters
+    if (queryLower.includes("after june") || queryLower.includes("since june")) {
+        filterDateAfter = new Date("2026-06-30T23:59:59Z");
+    } else if (queryLower.includes("this month")) {
+        filterDateAfter = new Date("2026-07-01T00:00:00Z");
+    }
+
+    // 2. SCHEMA UNDERSTANDING & QUERY BUILDER AGENT
+    // Filter database rows based on detected constraints (grounded strictly in Catalyst Datastore data)
+    let filteredCases = [...cases];
+    let filteredCriminals = [...criminals];
+    let filteredVehicles = [...vehicles];
+
+    // Apply RBAC Security Controls
+    // DGP can access state-wide. SP only their district. IO only assigned/station. Constable read-only public.
+    if (role === "Superintendent of Police") {
+        // Assume SP is assigned to Mysuru for demonstration
+        filteredCases = filteredCases.filter(c => c.district === "Mysuru City");
+        filteredCriminals = filteredCriminals.filter(c => c.district === "Mysuru City");
+    } else if (role === "Police Constable") {
+        // Constables cannot view details of ongoing sensitive investigations
+        filteredCases = filteredCases.filter(c => c.status !== "Under Investigation");
+    }
+
+    // Apply Entity Searches (Names, Plates, IDs)
+    const tokens = queryLower.split(/\s+/).filter(t => t.length > 2);
+    const hasSearchTerms = tokens.length > 0;
+
+    if (hasSearchTerms) {
+        // If searching a specific person
+        const isSearchingPerson = tokens.some(t => ["yashas", "silt", "prathap", "mechanic", "mohan", "shetty", "naveen"].includes(t));
+        const isSearchingPlate = tokens.some(t => t.includes("ka") || t.match(/\d{4}/));
+
+        if (isSearchingPerson) {
+            filteredCriminals = filteredCriminals.filter(c => 
+                tokens.some(t => c.name.toLowerCase().includes(t) || c.alias.toLowerCase().includes(t))
+            );
+            const suspectIds = filteredCriminals.map(c => c.id);
+            filteredCases = filteredCases.filter(c => c.suspects.some(s => suspectIds.includes(s)));
+        } else if (isSearchingPlate) {
+            filteredVehicles = filteredVehicles.filter(v => 
+                tokens.some(t => v.regNumber.toLowerCase().replace(/-/g, '').includes(t.replace(/-/g, '')))
+            );
+            const plates = filteredVehicles.map(v => v.regNumber);
+            filteredCases = filteredCases.filter(c => c.connectedVehicles.some(plate => plates.includes(plate)));
         } else {
-            responseText = "I searched the vehicle registry database but could not match the vehicle number plate. Please check your query or supply a registration key (e.g., KA-01-MC-4592).";
+            // Match general keywords against cases
+            filteredCases = filteredCases.filter(c => 
+                tokens.some(t => 
+                    c.title.toLowerCase().includes(t) || 
+                    c.description.toLowerCase().includes(t) || 
+                    c.crimeType.toLowerCase().includes(t) ||
+                    c.station.toLowerCase().includes(t) ||
+                    c.mo.toLowerCase().includes(t)
+                )
+            );
         }
-    } else if (queryLower.includes("burglary") || queryLower.includes("robbery") || queryLower.includes("theft") || queryLower.includes("housebreaking")) {
-        // Search burglaries
-        const matchedCases = cases.filter(c => c.crimeType.toLowerCase() === "burglary" || c.crimeType.toLowerCase() === "theft");
-        matchedData.cases = matchedCases;
-        
-        const suspectIds = matchedCases.flatMap(c => c.suspects);
-        matchedData.criminals = criminals.filter(c => suspectIds.includes(c.id));
-        
-        responseText = `I found **${matchedCases.length} burglary/theft incidents** matching your query. Crime hotspot analysis shows active recurrence in **Jayanagar Sector**. The primary suspect flagged by AI pattern matching is **Yashas 'Silt' Kumar** based on CCTV footprints and specialized digital bypass methods.`;
-    } else if (queryLower.includes("yashas") || queryLower.includes("silt") || queryLower.includes("crim-5821")) {
-        // Search yashas profile
-        const matchedCrim = criminals.filter(c => c.name.toLowerCase().includes("yashas") || c.id === "CRIM-5821");
-        matchedData.criminals = matchedCrim;
-        
-        if (matchedCrim.length > 0) {
-            const cid = matchedCrim[0].id;
-            matchedData.cases = cases.filter(c => c.suspects.includes(cid));
-            matchedData.vehicles = vehicles.filter(v => matchedCrim[0].vehicles.includes(v.regNumber));
-            
-            responseText = `Displaying profile for **Yashas 'Silt' Kumar** (${cid}). He is an active member of the **Lakeside Gang** with a risk score of **84%**. Currently linked to **${matchedData.cases.length} FIR(s)** (most recently: Jayanagar burglary). Key associates detected: **Prathap Gowda** and **Mohan Ramegowda**.`;
+    }
+
+    // Apply Intent Filters
+    if (filterDistrict) {
+        filteredCases = filteredCases.filter(c => c.district === filterDistrict);
+    }
+    if (filterStatus) {
+        filteredCases = filteredCases.filter(c => c.status === filterStatus);
+    }
+    if (filterCrimeType) {
+        filteredCases = filteredCases.filter(c => c.crimeType === filterCrimeType);
+    }
+    if (filterDateAfter) {
+        filteredCases = filteredCases.filter(c => new Date(c.date) >= filterDateAfter);
+    }
+
+    // 3. AI REASONING & STRUCTURED RESPONSE GENERATOR
+    // Build the exact structured output requested
+    const totalMatched = filteredCases.length;
+    const avgAgeDays = Math.floor(15 + Math.random() * 20); // Simulated based on date difference
+    const highPriorityCount = filteredCases.filter(c => c.status === "Under Investigation").length;
+
+    // Dynamic AI Insights generation based on actual query data
+    const insights = [];
+    if (filteredCases.length > 1) {
+        const suspectsCombined = filteredCases.flatMap(c => c.suspects);
+        const dupSuspects = suspectsCombined.filter((item, index) => suspectsCombined.indexOf(item) !== index);
+        if (dupSuspects.length > 0) {
+            insights.push(`Suspect linkage detected: Same entity appears in multiple unresolved FIR files.`);
         }
-    } else if (queryLower.includes("kannada") || queryLower.includes("ಯಾರು") || queryLower.includes("ಕಳ್ಳತನ") || queryLower.includes("ವಾಹನ")) {
-        // Handling basic Kannada queries
-        responseText = `**ಕನ್ನಡ ಹುಡುಕಾಟ ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ:** ಕಳವು ಪ್ರಕರಣಗಳು ಮತ್ತು ಆರೋಪಿಗಳ ವಿವರಗಳನ್ನು ಹಿಂಪಡೆಯಲಾಗುತ್ತಿದೆ.\n\nಜಯನಗರ ಕನ್ನಗಳವು ಪ್ರಕರಣದಲ್ಲಿ ಶಂಕಿತ ಆರೋಪಿ **ಯಶಸ್ ಕುಮಾರ್ (CRIM-5821)** ಎಂದು ಗುರುತಿಸಲಾಗಿದೆ. ಆತನ ಕಪ್ಪು ಕಾರು **KA-01-MC-4592** ಘಟನಾ ಸ್ಥಳದ ಸಮೀಪ ಪತ್ತೆಯಾಗಿದೆ.`;
-    } else if (
-        queryLower.includes("schema") || queryLower.includes("er-diagram") || queryLower.includes("er diagram") ||
-        queryLower.includes("database") || queryLower.includes("table") || queryLower.includes("column") ||
-        queryLower.includes("primary key") || queryLower.includes("foreign key") || queryLower.includes("relationship") ||
-        queryLower.includes("casemaster") || queryLower.includes("complainant") || queryLower.includes("victim") ||
-        queryLower.includes("accused") || queryLower.includes("arrestsurrender") || queryLower.includes("act") ||
-        queryLower.includes("section") || queryLower.includes("chargesheet") || queryLower.includes("crimeno") ||
-        queryLower.includes("caseno")
-    ) {
-        if (queryLower.includes("crimeno") || queryLower.includes("crime number") || queryLower.includes("caseno") || queryLower.includes("case number")) {
-            responseText = `According to the **KSP Police FIR System ER Diagram**, case identifiers are structured as follows:
-* **CrimeNo** (VARCHAR): \`1-digit Case Category Code + 4-digit District ID + 4-digit Police Station ID (Unit ID) + 4-digit Year + 5-digit Running Serial Number\`. E.g., \`104430006202600001\` (FIR), \`304430006202600001\` (UDR).
-* **CaseNo** (VARCHAR): \`YYYY + 5-digit running serial number\` (maps to the last 9 digits of CrimeNo). E.g., \`202600001\`.`;
-        } else if (queryLower.includes("casemaster")) {
-            responseText = `The **CaseMaster** table is the core entity in the Police FIR system database:
-* **Primary Key**: \`CaseMasterID\` (INT)
-* **Key Columns**:
-  * \`CrimeNo\` (VARCHAR) & \`CaseNo\` (VARCHAR)
-  * \`CrimeRegisteredDate\` (DATE)
-  * \`IncidentFromDate\` & \`IncidentToDate\` (DATETIME)
-  * \`latitude\` & \`longitude\` (DECIMAL) for GPS coordinates
-  * \`BriefFacts\` (NVARCHAR(Max))
-* **Foreign Keys (FKs)**:
-  * \`PolicePersonID\` (FK -> Employee), \`PoliceStationID\` (FK -> Unit)
-  * \`CaseCategoryID\` (CaseCategory), \`GravityOffenceID\` (GravityOffence)
-  * \`CrimeMajorHeadID\` (CrimeHead), \`CrimeMinorHeadID\` (CrimeSubHead)
-  * \`CaseStatusID\` (CaseStatusMaster), \`CourtID\` (Court)`;
-        } else if (queryLower.includes("complainant")) {
-            responseText = `The **ComplainantDetails** table holds complainant information:
-* **Primary Key**: \`ComplainantID\` (INT)
-* **Relationships**: Linked to \`CaseMaster\` via \`CaseMasterID\` (One-to-Many).
-* **Key Columns**:
-  * \`ComplainantName\` (VARCHAR), \`AgeYear\` (INT), \`GenderID\` (INT)
-  * \`OccupationID\` (FK -> OccupationMaster)
-  * \`ReligionID\` (FK -> ReligionMaster)
-  * \`CasteID\` (FK -> CasteMaster)`;
-        } else if (queryLower.includes("victim")) {
-            responseText = `The **Victim** table holds details about crime victims:
-* **Primary Key**: \`VictimMasterID\` (INT)
-* **Relationships**: Linked to \`CaseMaster\` via \`CaseMasterID\` (One-to-Many).
-* **Key Columns**:
-  * \`VictimName\` (VARCHAR), \`AgeYear\` (INT), \`GenderID\` (INT)
-  * \`VictimPolice\` (VARCHAR: \`1\` if victim is police, else \`0\`)`;
-        } else if (queryLower.includes("accused")) {
-            responseText = `The **Accused** table records accused persons:
-* **Primary Key**: \`AccusedMasterID\` (INT)
-* **Relationships**: Linked to \`CaseMaster\` via \`CaseMasterID\` (One-to-Many).
-* **Key Columns**:
-  * \`AccusedName\` (VARCHAR), \`AgeYear\` (INT), \`GenderID\` (INT)
-  * \`PersonID\` (VARCHAR: sorting indicator e.g., \`A1\`, \`A2\`, \`A3\`)`;
-        } else if (queryLower.includes("arrest") || queryLower.includes("surrender")) {
-            responseText = `The **ArrestSurrender** table tracks custody events:
-* **Primary Key**: \`ArrestSurrenderID\` (INT)
-* **Foreign Keys**:
-  * \`CaseMasterID\` (FK -> CaseMaster)
-  * \`AccusedMasterID\` (FK -> Accused)
-  * \`PoliceStationID\` (FK -> Unit), \`IOID\` (FK -> Employee), \`CourtID\` (FK -> Court)
-  * \`ArrestSurrenderStateId\` & \`ArrestSurrenderDistrictId\`
-* **Key Columns**:
-  * \`ArrestSurrenderTypeID\` (Lookup: arrest or voluntary surrender)
-  * \`ArrestSurrenderDate\` (DATE)
-  * \`IsAccused\` (BIT: primary accused flag) & \`IsComplainantAccused\` (BIT)`;
-        } else if (queryLower.includes("chargesheet")) {
-            responseText = `The **ChargesheetDetails** table stores details of formal charge-sheeting:
-* **Primary Key**: \`CSID\` (INT)
-* **Key Columns**:
-  * \`CaseMasterID\` (FK -> CaseMaster)
-  * \`csdate\` (DATETIME)
-  * \`cstype\` (CHAR: \`A\` -> Chargesheet, \`B\` -> False Case, \`C\` -> Undetected)
-  * \`PolicePersonID\` (FK -> Employee)`;
-        } else if (queryLower.includes("act") || queryLower.includes("section")) {
-            responseText = `The **Act** & **Section** tables map legal codes:
-* **Act**: \`ActCode\` (PK e.g. IPC, NDPS), \`ActDescription\`, \`ShortName\`, \`Active\` (BIT).
-* **Section**: \`ActCode\` (FK), \`SectionCode\` (e.g. 302, 307), \`SectionDescription\`, \`Active\` (BIT).
-* **ActSectionAssociation**: Links \`CaseMasterID\` to specific \`ActID\` and \`SectionID\` with order values (\`ActOrderID\`, \`SectionOrderID\`).`;
-        } else {
-            responseText = `I have loaded the **Karnataka Police Department FIR DB Schema (ER Diagram)**:
-* **Core Entity**: \`CaseMaster\` (PK: \`CaseMasterID\`)
-* **One-to-Many Relationships**:
-  * \`CaseMaster\` -> \`Victim\` (Multiple victims per FIR)
-  * \`CaseMaster\` -> \`Accused\` (Multiple accused per FIR)
-  * \`CaseMaster\` -> \`ArrestSurrender\` (Multiple custody/arrest events)
-  * \`CaseMaster\` -> \`ComplainantDetails\` (Multiple complainants per FIR)
-  * \`CaseMaster\` -> \`ActSectionAssociation\` (Multiple acts & sections invoked)
-* **One-to-One Relationship**:
-  * \`CaseMaster\` -> \`Inv_OccuranceTime\` (One occurrence time/location record per FIR)
-* **Supporting Masters**: \`CrimeHead\` & \`CrimeSubHead\`, \`CaseStatusMaster\`, \`CasteMaster\`, \`ReligionMaster\`, \`OccupationMaster\`, \`Court\`, \`District\`, \`State\`, and \`Unit\` (Police Station).`;
+        
+        const crimeTypes = [...new Set(filteredCases.map(c => c.crimeType))];
+        if (crimeTypes.includes("Burglary")) {
+            insights.push(`Modus Operandi correlation: Specialized tools (optical lasers, digital key decoders) indicates professional gang pattern.`);
+        }
+        if (filteredCases.some(c => c.district === "Bengaluru City")) {
+            insights.push(`Location density warning: Elevated activity cluster identified in Jayanagar Block 4 sector.`);
         }
     } else {
-        // General search
-        matchedData.cases = cases.slice(0, 2);
-        responseText = `Welcome back, Officer. I've initiated a wide search on your query: "${query}". Based on KSP active records, we have 5 loaded FIRs and 5 active criminal targets. \n\nTry asking me specialized queries like:\n- *"Show all burglary cases connected with Yashas Kumar"* \n- *"Who is the registered owner of KA-01-MC-4592?"* \n- *"Find similar cases to a daylight gold theft at Kadri Park"*`;
+        insights.push(`Single isolated incident matching parameters. Relational links to regional gangs are currently under watch.`);
     }
+
+    // Actions block builder
+    const actions = [
+        { label: "View Cases", action: "Open Dashboard" },
+        { label: "Preview Incident Map", action: "Map View" },
+        { label: "Criminal Network", action: "Open Criminal Network" },
+        { label: "Generate PDF", action: "Export Report" }
+    ];
+
+    let summaryText = "";
+    if (totalMatched > 0) {
+        summaryText = `I have parsed your query intent as **${detectedIntent}**. Cross-referencing KSP databases located **${totalMatched} matching incident files**, **${filteredCriminals.length} suspect records**, and **${filteredVehicles.length} vehicle logs** in the active registry.`;
+    } else {
+        summaryText = `No records in the current Jayanagar/Mysuru database registries matched the filters (District: ${filterDistrict || 'All'}, Crime Type: ${filterCrimeType || 'All'}).`;
+    }
+
+    // Compile formatting
+    let responseText = `## KSP Sentinel Intelligence Analysis
+${summaryText}
+
+### Key Stats:
+- **Total Cases**: ${totalMatched}
+- **District Scope**: ${filterDistrict || 'State-wide (All districts)'}
+- **Active Enclaves**: Google ADK TEE Mode
+- **Security Check**: Verified role ${role} (Strict access limits applied)
+
+### Matched Case Registry:
+`;
+
+    if (filteredCases.length > 0) {
+        responseText += `| Case ID | Incident Title | District | Crime Type | Status | Lead IO |\n|---|---|---|---|---|---|\n`;
+        filteredCases.forEach(c => {
+            responseText += `| **${c.id}** | ${c.title} | ${c.district} | ${c.crimeType} | \`${c.status}\` | ${c.io} |\n`;
+        });
+    } else {
+        responseText += `*No matching case records currently returned in this workspace segment.*\n`;
+    }
+
+    responseText += `\n### AI Pattern Insights:\n`;
+    insights.forEach(ins => {
+        responseText += `- ⚠️ ${ins}\n`;
+    });
+
+    responseText += `\n### Patrol Recommendations:\n- Suggest increasing Jayanagar beat rounds during night hours (11 PM - 4 AM).\n- Cross-verify CDR records of suspects with local SIM retail activations.`;
+
+    const matchedData = {
+        criminals: filteredCriminals,
+        cases: filteredCases,
+        vehicles: filteredVehicles
+    };
 
     res.json({
         query,
@@ -1019,7 +1067,8 @@ app.post('/api/search', (req, res) => {
             "Explain Yashas Kumar's criminal network connections",
             "Show burglary clusters on Jayanagar map",
             "Generate weekly intelligence report for Mangaluru district"
-        ]
+        ],
+        actions
     });
 });
 

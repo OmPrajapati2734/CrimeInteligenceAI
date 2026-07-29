@@ -2,242 +2,321 @@
   "State": {
     "displayName": "State",
     "primaryKey": "StateID",
+    "tableType": "master",
     "fields": {
-      "StateID": { "type": "number", "required": true, "updatable": false },
-      "StateName": { "type": "string", "required": true, "maxLength": 100 },
-      "NationalityID": { "type": "number", "required": true },
-      "Active": { "type": "boolean", "required": true, "default": true }
+      "StateID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "StateName": { "type": "text", "required": true, "maxLength": 200, "description": "State name", "indexed": true },
+      "NationalityID": { "type": "bigint", "required": false, "description": "Nationality reference ID" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
     }
   },
   "District": {
     "displayName": "District",
     "primaryKey": "DistrictID",
+    "tableType": "master",
     "fields": {
-      "DistrictID": { "type": "number", "required": true, "updatable": false },
-      "StateID": { "type": "number", "required": true, "references": "State.StateID" },
-      "DistrictName": { "type": "string", "required": true, "maxLength": 100 },
-      "Active": { "type": "boolean", "required": true, "default": true }
+      "DistrictID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "DistrictName": { "type": "text", "required": true, "maxLength": 200, "description": "District name", "indexed": true },
+      "StateID": { "type": "bigint", "required": true, "references": "State.StateID", "description": "FK → State.StateID", "indexed": true },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
     }
   },
   "UnitType": {
     "displayName": "Unit Type",
     "primaryKey": "UnitTypeID",
+    "tableType": "lookup",
     "fields": {
-      "UnitTypeID": { "type": "number", "required": true, "updatable": false },
-      "UnitTypeName": { "type": "string", "required": true, "maxLength": 100 },
-      "CityDistState": { "type": "string", "required": true, "maxLength": 50 },
-      "Hierarchy": { "type": "number", "required": true },
-      "Active": { "type": "boolean", "required": true, "default": true }
-    }
-  },
-  "Unit": {
-    "displayName": "Police Unit",
-    "primaryKey": "UnitID",
-    "fields": {
-      "UnitID": { "type": "number", "required": true, "updatable": false },
-      "UnitName": { "type": "string", "required": true, "maxLength": 200 },
-      "TypeID": { "type": "number", "required": true, "references": "UnitType.UnitTypeID" },
-      "ParentUnit": { "type": "number", "required": false },
-      "StateID": { "type": "number", "required": true, "references": "State.StateID" },
-      "DistrictID": { "type": "number", "required": true, "references": "District.DistrictID" },
-      "Active": { "type": "boolean", "required": true, "default": true }
+      "UnitTypeID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "UnitTypeName": { "type": "text", "required": true, "maxLength": 200, "description": "Unit type name" },
+      "CityDistState": { "type": "text", "required": false, "maxLength": 50, "description": "Operational level" },
+      "Hierarchy": { "type": "bigint", "required": false, "description": "Lower = higher authority" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
     }
   },
   "Rank": {
     "displayName": "Police Rank",
     "primaryKey": "RankID",
+    "tableType": "lookup",
     "fields": {
-      "RankID": { "type": "number", "required": true, "updatable": false },
-      "RankName": { "type": "string", "required": true, "maxLength": 100 },
-      "Hierarchy": { "type": "number", "required": true },
-      "Active": { "type": "boolean", "required": true, "default": true }
+      "RankID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "RankName": { "type": "text", "required": true, "maxLength": 200, "description": "Rank name" },
+      "Hierarchy": { "type": "bigint", "required": false, "description": "Lower = higher rank" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
     }
   },
   "Designation": {
     "displayName": "Designation",
     "primaryKey": "DesignationID",
+    "tableType": "lookup",
     "fields": {
-      "DesignationID": { "type": "number", "required": true, "updatable": false },
-      "DesignationName": { "type": "string", "required": true, "maxLength": 100 },
-      "SortOrder": { "type": "number", "required": true },
-      "Active": { "type": "boolean", "required": true, "default": true }
+      "DesignationID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "DesignationName": { "type": "text", "required": true, "maxLength": 200, "description": "Designation name" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" },
+      "SortOrder": { "type": "bigint", "required": false, "description": "Dropdown/report order" }
     }
   },
-  "Employee": {
-    "displayName": "Police Officer",
-    "primaryKey": "EmployeeID",
+  "CasteMaster": {
+    "displayName": "Caste Master",
+    "primaryKey": "caste_master_id",
+    "tableType": "lookup",
     "fields": {
-      "EmployeeID": { "type": "number", "required": true, "updatable": false },
-      "DistrictID": { "type": "number", "required": true, "references": "District.DistrictID" },
-      "UnitID": { "type": "number", "required": true, "references": "Unit.UnitID" },
-      "RankID": { "type": "number", "required": true, "references": "Rank.RankID" },
-      "DesignationID": { "type": "number", "required": true, "references": "Designation.DesignationID" },
-      "KGID": { "type": "string", "required": true, "maxLength": 50 },
-      "FirstName": { "type": "string", "required": true, "maxLength": 100 },
-      "EmployeeDOB": { "type": "string", "required": true },
-      "GenderID": { "type": "number", "required": true },
-      "AppointmentDate": { "type": "string", "required": true }
+      "caste_master_id": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "caste_master_name": { "type": "text", "required": true, "maxLength": 200, "description": "Caste name" }
     }
   },
-  "CaseMaster": {
-    "displayName": "Case File (FIR)",
-    "primaryKey": "CaseMasterID",
+  "ReligionMaster": {
+    "displayName": "Religion Master",
+    "primaryKey": "ReligionID",
+    "tableType": "lookup",
     "fields": {
-      "CaseMasterID": { "type": "number", "required": true, "updatable": false },
-      "FIRNumber": { "type": "string", "required": true, "maxLength": 100 },
-      "FIRDate": { "type": "string", "required": true },
-      "PoliceStationID": { "type": "number", "required": true, "references": "Unit.UnitID" },
-      "PolicePersonID": { "type": "number", "required": true, "references": "Employee.EmployeeID" },
-      "CrimeMajorHeadID": { "type": "number", "required": true, "references": "CrimeHead.CrimeHeadID" },
-      "CrimeMinorHeadID": { "type": "number", "required": true, "references": "CrimeSubHead.CrimeSubHeadID" },
-      "CaseStatusID": { "type": "number", "required": true, "references": "CaseStatusMaster.CaseStatusMasterID" },
-      "GravityOffenceID": { "type": "number", "required": true, "references": "GravityOffence.GravityOffenceID" },
-      "CourtID": { "type": "number", "required": true, "references": "Court.CourtID" },
-      "CaseCategoryID": { "type": "number", "required": true, "references": "CaseCategory.CaseCategoryID" }
+      "ReligionID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "ReligionName": { "type": "text", "required": true, "maxLength": 200, "description": "Religion name" }
     }
   },
-  "CrimeHead": {
-    "displayName": "Major Crime Category",
-    "primaryKey": "CrimeHeadID",
+  "OccupationMaster": {
+    "displayName": "Occupation Master",
+    "primaryKey": "OccupationID",
+    "tableType": "lookup",
     "fields": {
-      "CrimeHeadID": { "type": "number", "required": true, "updatable": false },
-      "CrimeGroupName": { "type": "string", "required": true, "maxLength": 200 }
-    }
-  },
-  "CrimeSubHead": {
-    "displayName": "Crime Type",
-    "primaryKey": "CrimeSubHeadID",
-    "fields": {
-      "CrimeSubHeadID": { "type": "number", "required": true, "updatable": false },
-      "CrimeHeadID": { "type": "number", "required": true, "references": "CrimeHead.CrimeHeadID" },
-      "CrimeHeadName": { "type": "string", "required": true, "maxLength": 200 }
+      "OccupationID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "OccupationName": { "type": "text", "required": true, "maxLength": 200, "description": "Occupation name" }
     }
   },
   "CaseStatusMaster": {
     "displayName": "Case Status",
-    "primaryKey": "CaseStatusMasterID",
+    "primaryKey": "CaseStatusID",
+    "tableType": "lookup",
     "fields": {
-      "CaseStatusMasterID": { "type": "number", "required": true, "updatable": false },
-      "CaseStatusName": { "type": "string", "required": true, "maxLength": 100 }
-    }
-  },
-  "GravityOffence": {
-    "displayName": "Offence Gravity",
-    "primaryKey": "GravityOffenceID",
-    "fields": {
-      "GravityOffenceID": { "type": "number", "required": true, "updatable": false },
-      "GravityOffenceName": { "type": "string", "required": true, "maxLength": 100 }
+      "CaseStatusID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseStatusName": { "type": "text", "required": true, "maxLength": 200, "description": "Status name" }
     }
   },
   "CaseCategory": {
     "displayName": "Case Category",
     "primaryKey": "CaseCategoryID",
+    "tableType": "lookup",
     "fields": {
-      "CaseCategoryID": { "type": "number", "required": true, "updatable": false },
-      "CategoryName": { "type": "string", "required": true, "maxLength": 50 }
+      "CaseCategoryID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "LookupValue": { "type": "text", "required": true, "maxLength": 100, "description": "Category name like FIR, UDR, PAR" }
+    }
+  },
+  "GravityOffence": {
+    "displayName": "Offence Gravity",
+    "primaryKey": "GravityOffenceID",
+    "tableType": "lookup",
+    "fields": {
+      "GravityOffenceID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "LookupValue": { "type": "text", "required": true, "maxLength": 200, "description": "Gravity description" }
+    }
+  },
+  "CrimeHead": {
+    "displayName": "Major Crime Category",
+    "primaryKey": "CrimeHeadID",
+    "tableType": "lookup",
+    "fields": {
+      "CrimeHeadID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CrimeGroupName": { "type": "text", "required": true, "maxLength": 500, "description": "Major crime head name", "indexed": true },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
+    }
+  },
+  "CrimeSubHead": {
+    "displayName": "Crime Sub-Head",
+    "primaryKey": "CrimeSubHeadID",
+    "tableType": "transaction",
+    "fields": {
+      "CrimeSubHeadID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CrimeHeadID": { "type": "bigint", "required": true, "references": "CrimeHead.CrimeHeadID", "description": "FK → CrimeHead.CrimeHeadID", "indexed": true },
+      "CrimeHeadName": { "type": "text", "required": true, "maxLength": 500, "description": "Sub-head name" },
+      "SeqID": { "type": "bigint", "required": false, "description": "Sort order" }
+    }
+  },
+  "Act": {
+    "displayName": "Legal Act",
+    "primaryKey": "ActCode",
+    "tableType": "master",
+    "fields": {
+      "ActCode": { "type": "text", "required": true, "updatable": false, "maxLength": 50, "description": "Primary key code", "indexed": true },
+      "ActDescription": { "type": "text", "required": true, "maxLength": 1000, "description": "Full official name" },
+      "ShortName": { "type": "text", "required": false, "maxLength": 100, "description": "Abbreviation" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
+    }
+  },
+  "Section": {
+    "displayName": "Act Section",
+    "primaryKey": "SectionCode",
+    "tableType": "master",
+    "fields": {
+      "ActCode": { "type": "text", "required": true, "maxLength": 50, "references": "Act.ActCode", "description": "FK → Act.ActCode", "indexed": true },
+      "SectionCode": { "type": "text", "required": true, "updatable": false, "maxLength": 100, "description": "Section number/code", "indexed": true },
+      "SectionDescription": { "type": "text", "required": false, "maxLength": 2000, "description": "Full description" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
+    }
+  },
+  "Court": {
+    "displayName": "Court",
+    "primaryKey": "CourtID",
+    "tableType": "master",
+    "fields": {
+      "CourtID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CourtName": { "type": "text", "required": true, "maxLength": 500, "description": "Court name" },
+      "DistrictID": { "type": "bigint", "required": false, "references": "District.DistrictID", "description": "FK → District.DistrictID", "indexed": true },
+      "StateID": { "type": "bigint", "required": false, "references": "State.StateID", "description": "FK → State.StateID" },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
+    }
+  },
+  "Unit": {
+    "displayName": "Police Unit / Station",
+    "primaryKey": "UnitID",
+    "tableType": "master",
+    "fields": {
+      "UnitID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key", "indexed": true },
+      "UnitName": { "type": "text", "required": true, "maxLength": 500, "description": "Unit / police station name" },
+      "TypeID": { "type": "bigint", "required": false, "references": "UnitType.UnitTypeID", "description": "FK → UnitType.UnitTypeID" },
+      "ParentUnit": { "type": "bigint", "required": false, "description": "Self-reference to UnitID" },
+      "NationalityID": { "type": "bigint", "required": false, "description": "Nationality reference ID" },
+      "StateID": { "type": "bigint", "required": false, "references": "State.StateID", "description": "FK → State.StateID" },
+      "DistrictID": { "type": "bigint", "required": false, "references": "District.DistrictID", "description": "FK → District.DistrictID", "indexed": true },
+      "Active": { "type": "boolean", "required": true, "default": true, "description": "1 active, 0 inactive" }
+    }
+  },
+  "Employee": {
+    "displayName": "Police Officer / Employee",
+    "primaryKey": "EmployeeID",
+    "tableType": "master",
+    "fields": {
+      "EmployeeID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key", "indexed": true },
+      "DistrictID": { "type": "bigint", "required": false, "references": "District.DistrictID", "description": "FK → District.DistrictID", "indexed": true },
+      "UnitID": { "type": "bigint", "required": false, "references": "Unit.UnitID", "description": "FK → Unit.UnitID", "indexed": true },
+      "RankID": { "type": "bigint", "required": false, "references": "Rank.RankID", "description": "FK → Rank.RankID" },
+      "DesignationID": { "type": "bigint", "required": false, "references": "Designation.DesignationID", "description": "FK → Designation.DesignationID" },
+      "KGID": { "type": "text", "required": false, "maxLength": 50, "description": "Karnataka Government ID" },
+      "FirstName": { "type": "text", "required": true, "maxLength": 200, "description": "First name" },
+      "EmployeeDOB": { "type": "text", "required": false, "maxLength": 20, "description": "Date of birth (ISO date)" },
+      "GenderID": { "type": "bigint", "required": false, "description": "Lookup value" },
+      "BloodGroupID": { "type": "bigint", "required": false, "description": "Lookup value" },
+      "PhysicallyChallenged": { "type": "boolean", "required": false, "default": false, "description": "1 yes, 0 no" },
+      "AppointmentDate": { "type": "text", "required": false, "maxLength": 20, "description": "Appointment date (ISO date)" }
+    }
+  },
+  "CaseMaster": {
+    "displayName": "Case File (FIR)",
+    "primaryKey": "CaseMasterID",
+    "tableType": "transaction",
+    "fields": {
+      "CaseMasterID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key", "indexed": true },
+      "CrimeNo": { "type": "text", "required": false, "maxLength": 100, "description": "Crime number", "indexed": true },
+      "CaseNo": { "type": "text", "required": false, "maxLength": 100, "description": "Case number", "indexed": true },
+      "CrimeRegisteredDate": { "type": "text", "required": false, "maxLength": 30, "description": "FIR registration date (ISO date)" },
+      "PolicePersonID": { "type": "bigint", "required": false, "references": "Employee.EmployeeID", "description": "FK → Employee.EmployeeID", "indexed": true },
+      "PoliceStationID": { "type": "bigint", "required": false, "references": "Unit.UnitID", "description": "FK → Unit.UnitID", "indexed": true },
+      "CaseCategoryID": { "type": "bigint", "required": false, "references": "CaseCategory.CaseCategoryID", "description": "FK → CaseCategory.CaseCategoryID" },
+      "GravityOffenceID": { "type": "bigint", "required": false, "references": "GravityOffence.GravityOffenceID", "description": "FK → GravityOffence.GravityOffenceID" },
+      "CrimeMajorHeadID": { "type": "bigint", "required": false, "references": "CrimeHead.CrimeHeadID", "description": "FK → CrimeHead.CrimeHeadID", "indexed": true },
+      "CrimeMinorHeadID": { "type": "bigint", "required": false, "references": "CrimeSubHead.CrimeSubHeadID", "description": "FK → CrimeSubHead.CrimeSubHeadID", "indexed": true },
+      "CaseStatusID": { "type": "bigint", "required": false, "references": "CaseStatusMaster.CaseStatusID", "description": "FK → CaseStatusMaster.CaseStatusID", "indexed": true },
+      "CourtID": { "type": "bigint", "required": false, "references": "Court.CourtID", "description": "FK → Court.CourtID" },
+      "IncidentFromDate": { "type": "text", "required": false, "maxLength": 30, "description": "Start date/time of incident (ISO datetime)" },
+      "IncidentToDate": { "type": "text", "required": false, "maxLength": 30, "description": "End date/time of incident (ISO datetime)" },
+      "InfoReceivedPSDate": { "type": "text", "required": false, "maxLength": 30, "description": "Police station info received date/time" },
+      "latitude": { "type": "double", "required": false, "description": "GPS latitude" },
+      "longitude": { "type": "double", "required": false, "description": "GPS longitude" },
+      "BriefFacts": { "type": "text", "required": false, "maxLength": 10000, "description": "Summary of the case" }
     }
   },
   "ComplainantDetails": {
     "displayName": "Complainant Details",
     "primaryKey": "ComplainantID",
+    "tableType": "transaction",
     "fields": {
-      "ComplainantID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "ComplainantName": { "type": "string", "required": true, "maxLength": 200 },
-      "Phone": { "type": "string", "required": true, "maxLength": 20 },
-      "Address": { "type": "string", "required": true }
+      "ComplainantID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "ComplainantName": { "type": "text", "required": true, "maxLength": 300, "description": "Full name" },
+      "AgeYear": { "type": "bigint", "required": false, "description": "Age" },
+      "OccupationID": { "type": "bigint", "required": false, "references": "OccupationMaster.OccupationID", "description": "FK → OccupationMaster.OccupationID" },
+      "ReligionID": { "type": "bigint", "required": false, "references": "ReligionMaster.ReligionID", "description": "FK → ReligionMaster.ReligionID" },
+      "CasteID": { "type": "bigint", "required": false, "references": "CasteMaster.caste_master_id", "description": "FK → CasteMaster.caste_master_id" },
+      "GenderID": { "type": "bigint", "required": false, "description": "Lookup value" }
     }
   },
   "Victim": {
     "displayName": "Victim Details",
-    "primaryKey": "VictimID",
+    "primaryKey": "VictimMasterID",
+    "tableType": "transaction",
     "fields": {
-      "VictimID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "VictimName": { "type": "string", "required": true, "maxLength": 200 },
-      "Age": { "type": "number", "required": true },
-      "Gender": { "type": "string", "required": true, "maxLength": 20 },
-      "Phone": { "type": "string", "required": false, "maxLength": 20 }
+      "VictimMasterID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "VictimName": { "type": "text", "required": true, "maxLength": 300, "description": "Full name" },
+      "AgeYear": { "type": "bigint", "required": false, "description": "Age" },
+      "GenderID": { "type": "bigint", "required": false, "description": "Lookup value" },
+      "VictimPolice": { "type": "text", "required": false, "maxLength": 10, "description": "1 if victim is police else 0" }
     }
   },
   "Accused": {
     "displayName": "Accused Details",
-    "primaryKey": "AccusedID",
+    "primaryKey": "AccusedMasterID",
+    "tableType": "transaction",
     "fields": {
-      "AccusedID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "AccusedName": { "type": "string", "required": true, "maxLength": 200 },
-      "Age": { "type": "number", "required": true },
-      "Gender": { "type": "string", "required": true, "maxLength": 20 },
-      "PreviousConvictions": { "type": "number", "required": true, "default": 0 }
+      "AccusedMasterID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "AccusedName": { "type": "text", "required": true, "maxLength": 300, "description": "Full name" },
+      "AgeYear": { "type": "bigint", "required": false, "description": "Age" },
+      "GenderID": { "type": "bigint", "required": false, "description": "M/F/T lookup" },
+      "PersonID": { "type": "text", "required": false, "maxLength": 20, "description": "Sorting like A1, A2, A3" }
     }
   },
   "ArrestSurrender": {
-    "displayName": "Arrest / Surrender History",
-    "primaryKey": "ArrestID",
+    "displayName": "Arrest / Surrender Record",
+    "primaryKey": "ArrestSurrenderID",
+    "tableType": "transaction",
     "fields": {
-      "ArrestID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "AccusedID": { "type": "number", "required": true, "references": "Accused.AccusedID" },
-      "ArrestDate": { "type": "string", "required": true },
-      "ArrestLocation": { "type": "string", "required": true }
-    }
-  },
-  "Act": {
-    "displayName": "Legal Act",
-    "primaryKey": "ActID",
-    "fields": {
-      "ActID": { "type": "number", "required": true, "updatable": false },
-      "ActName": { "type": "string", "required": true, "maxLength": 200 }
-    }
-  },
-  "Section": {
-    "displayName": "Act Section",
-    "primaryKey": "SectionID",
-    "fields": {
-      "SectionID": { "type": "number", "required": true, "updatable": false },
-      "ActID": { "type": "number", "required": true, "references": "Act.ActID" },
-      "SectionNumber": { "type": "string", "required": true, "maxLength": 50 },
-      "Description": { "type": "string", "required": true }
+      "ArrestSurrenderID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "ArrestSurrenderTypeID": { "type": "bigint", "required": false, "description": "Lookup value" },
+      "ArrestSurrenderDate": { "type": "text", "required": false, "maxLength": 30, "description": "Date of arrest/surrender (ISO date)" },
+      "ArrestSurrenderStateId": { "type": "bigint", "required": false, "references": "State.StateID", "description": "FK → State.StateID" },
+      "ArrestSurrenderDistrictId": { "type": "bigint", "required": false, "references": "District.DistrictID", "description": "FK → District.DistrictID" },
+      "PoliceStationID": { "type": "bigint", "required": false, "references": "Unit.UnitID", "description": "FK → Unit.UnitID" },
+      "IOID": { "type": "bigint", "required": false, "references": "Employee.EmployeeID", "description": "FK → Employee.EmployeeID (Investigating Officer)" },
+      "CourtID": { "type": "bigint", "required": false, "references": "Court.CourtID", "description": "FK → Court.CourtID" },
+      "AccusedMasterID": { "type": "bigint", "required": false, "references": "Accused.AccusedMasterID", "description": "FK → Accused.AccusedMasterID" },
+      "IsAccused": { "type": "boolean", "required": false, "default": false, "description": "0/1 flag" },
+      "IsComplainantAccused": { "type": "boolean", "required": false, "default": false, "description": "0/1 flag" }
     }
   },
   "ActSectionAssociation": {
     "displayName": "FIR Act-Section Links",
     "primaryKey": "AssociationID",
+    "tableType": "junction",
     "fields": {
-      "AssociationID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "ActID": { "type": "number", "required": true, "references": "Act.ActID" },
-      "SectionID": { "type": "number", "required": true, "references": "Section.SectionID" }
+      "AssociationID": { "type": "bigint", "required": true, "updatable": false, "description": "Auto-generated PK for junction" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "ActID": { "type": "text", "required": true, "maxLength": 50, "references": "Act.ActCode", "description": "FK → Act.ActCode" },
+      "SectionID": { "type": "text", "required": true, "maxLength": 100, "references": "Section.SectionCode", "description": "FK → Section.SectionCode" },
+      "ActOrderID": { "type": "bigint", "required": false, "description": "Display/print order of act" },
+      "SectionOrderID": { "type": "bigint", "required": false, "description": "Display/print order of section" }
     }
   },
   "CrimeHeadActSection": {
-    "displayName": "Legal Recommendation Map",
+    "displayName": "Crime Head ↔ Act Section Map",
     "primaryKey": "MappingID",
+    "tableType": "junction",
     "fields": {
-      "MappingID": { "type": "number", "required": true, "updatable": false },
-      "CrimeHeadID": { "type": "number", "required": true, "references": "CrimeHead.CrimeHeadID" },
-      "ActID": { "type": "number", "required": true, "references": "Act.ActID" },
-      "SectionID": { "type": "number", "required": true, "references": "Section.SectionID" }
+      "MappingID": { "type": "bigint", "required": true, "updatable": false, "description": "Auto-generated PK for junction" },
+      "CrimeHeadID": { "type": "bigint", "required": true, "references": "CrimeHead.CrimeHeadID", "description": "FK → CrimeHead.CrimeHeadID", "indexed": true },
+      "ActCode": { "type": "text", "required": true, "maxLength": 50, "references": "Act.ActCode", "description": "FK → Act.ActCode" },
+      "SectionCode": { "type": "text", "required": false, "maxLength": 100, "description": "Section code applicable to crime head" }
     }
   },
-  "Court": {
-    "displayName": "Court Details",
-    "primaryKey": "CourtID",
+  "ChargesheetDetails": {
+    "displayName": "Chargesheet Details",
+    "primaryKey": "CSID",
+    "tableType": "transaction",
     "fields": {
-      "CourtID": { "type": "number", "required": true, "updatable": false },
-      "CourtName": { "type": "string", "required": true, "maxLength": 200 },
-      "DistrictID": { "type": "number", "required": true, "references": "District.DistrictID" }
-    }
-  },
-  "ChargeSheetDetails": {
-    "displayName": "Charge Sheet details",
-    "primaryKey": "ChargeSheetID",
-    "fields": {
-      "ChargeSheetID": { "type": "number", "required": true, "updatable": false },
-      "CaseMasterID": { "type": "number", "required": true, "references": "CaseMaster.CaseMasterID" },
-      "ChargeSheetNumber": { "type": "string", "required": true, "maxLength": 100 },
-      "SubmissionDate": { "type": "string", "required": true }
+      "CSID": { "type": "bigint", "required": true, "updatable": false, "description": "Primary key" },
+      "CaseMasterID": { "type": "bigint", "required": true, "references": "CaseMaster.CaseMasterID", "description": "FK → CaseMaster.CaseMasterID", "indexed": true },
+      "csdate": { "type": "text", "required": false, "maxLength": 30, "description": "Chargesheet date (ISO datetime)" },
+      "cstype": { "type": "text", "required": false, "maxLength": 5, "description": "A=Chargesheet, B=False Case, C=Undetected" },
+      "PolicePersonID": { "type": "bigint", "required": false, "references": "Employee.EmployeeID", "description": "FK → Employee.EmployeeID" }
     }
   }
 }

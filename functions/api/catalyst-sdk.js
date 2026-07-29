@@ -22,17 +22,43 @@ const CATALYST_ZAID = process.env.CATALYST_ZAID || '60075829466';
 const CATALYST_DATACENTER = (process.env.CATALYST_DATACENTER || 'IN').toLowerCase();
 const IS_INSIDE_CATALYST = process.env.CATALYST_AUTH_TOKEN !== undefined;
 
-// ─── Table Name Registry ──────────────────────────────────────────────────────
+// ─── Table Name Registry (Official KSP ER Schema — 26 Tables) ────────────────
 const TABLES = {
-    CASES:      'Cases',
-    CRIMINALS:  'Criminals',
-    VICTIMS:    'Victims',
-    HOTSPOTS:   'Hotspots',
-    AUDIT_LOGS: 'AuditLogs',
-    OFFICERS:   'Officers',
-    PATROLS:    'Patrols',
-    EVIDENCE:   'Evidence',
-    FIR_DOCS:   'FIRDocuments',
+    // Tier 1: Independent master/lookup tables
+    STATE:              'State',
+    DISTRICT:           'District',
+    UNIT_TYPE:          'UnitType',
+    RANK:               'Rank',
+    DESIGNATION:        'Designation',
+    CASTE_MASTER:       'CasteMaster',
+    RELIGION_MASTER:    'ReligionMaster',
+    OCCUPATION_MASTER:  'OccupationMaster',
+    CASE_STATUS_MASTER: 'CaseStatusMaster',
+    CASE_CATEGORY:      'CaseCategory',
+    GRAVITY_OFFENCE:    'GravityOffence',
+    CRIME_HEAD:         'CrimeHead',
+
+    // Tier 2: Dependent master tables
+    CRIME_SUB_HEAD:     'CrimeSubHead',
+    ACT:                'Act',
+    SECTION:            'Section',
+    COURT:              'Court',
+    UNIT:               'Unit',
+
+    // Tier 3: Employee master
+    EMPLOYEE:           'Employee',
+
+    // Tier 4: Core transaction tables
+    CASE_MASTER:        'CaseMaster',
+    COMPLAINANT:        'ComplainantDetails',
+    VICTIM:             'Victim',
+    ACCUSED:            'Accused',
+    ARREST_SURRENDER:   'ArrestSurrender',
+    CHARGESHEET:        'ChargesheetDetails',
+
+    // Tier 5: Junction tables
+    ACT_SECTION_ASSOC:  'ActSectionAssociation',
+    CRIME_HEAD_ACT_SEC: 'CrimeHeadActSection',
 };
 
 /**

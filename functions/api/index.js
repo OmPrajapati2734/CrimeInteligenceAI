@@ -165,24 +165,99 @@ Object.keys(schemas).forEach(tableName => {
     localDatabaseStore[tableName] = [];
 });
 
-// Seed some initial data for lookups and tests so they are never empty
-localDatabaseStore.State.push({ StateID: 1, StateName: "Karnataka", NationalityID: 1, Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.District.push({ DistrictID: 1, StateID: 1, DistrictName: "Bengaluru City", Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.District.push({ DistrictID: 2, StateID: 1, DistrictName: "Mysuru City", Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.District.push({ DistrictID: 3, StateID: 1, DistrictName: "Mangaluru", Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.UnitType.push({ UnitTypeID: 1, UnitTypeName: "Police Station", CityDistState: "City", Hierarchy: 1, Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.Unit.push({ UnitID: 1, UnitName: "Ullal PS", TypeID: 1, ParentUnit: 0, StateID: 1, DistrictID: 3, Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.Rank.push({ RankID: 1, RankName: "Inspector", Hierarchy: 5, Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.Designation.push({ DesignationID: 1, DesignationName: "Investigating Officer", SortOrder: 1, Active: true, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.Employee.push({ EmployeeID: 1, DistrictID: 1, UnitID: 1, RankID: 1, DesignationID: 1, KGID: "KGID8812", FirstName: "Inspector H. S. Rao", EmployeeDOB: "1980-05-15", GenderID: 1, AppointmentDate: "2005-08-01", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseStatusMaster.push({ CaseStatusMasterID: 1, CaseStatusName: "Under Investigation", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseStatusMaster.push({ CaseStatusMasterID: 2, CaseStatusName: "Registered", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseStatusMaster.push({ CaseStatusMasterID: 3, CaseStatusName: "Chargesheet Filed", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseStatusMaster.push({ CaseStatusMasterID: 4, CaseStatusName: "Closed", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.GravityOffence.push({ GravityOffenceID: 1, GravityOffenceName: "Heinous", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.GravityOffence.push({ GravityOffenceID: 2, GravityOffenceName: "Non-Heinous", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseCategory.push({ CaseCategoryID: 1, CategoryName: "FIR", CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
-localDatabaseStore.CaseMaster.push({ CaseMasterID: 1, FIRNumber: "FIR-2026-102", FIRDate: "2026-07-02T22:00:00Z", PoliceStationID: 1, PolicePersonID: 1, CrimeMajorHeadID: 1, CrimeMinorHeadID: 1, CaseStatusID: 1, GravityOffenceID: 1, CourtID: 1, CaseCategoryID: 1, CreatedAt: new Date().toISOString(), CreatedBy: "System", IsDeleted: false, VersionNumber: 1 });
+// Seed some initial data for lookups and tests so they are never empty (ER-aligned column names)
+const now = new Date().toISOString();
+const SEED = { created_at: now, created_by: "System", updated_at: now, updated_by: "System", is_active: true };
+
+localDatabaseStore.State.push({ StateID: 1, StateName: "Karnataka", NationalityID: 1, Active: true, ...SEED });
+
+localDatabaseStore.District.push({ DistrictID: 1, StateID: 1, DistrictName: "Bengaluru City", Active: true, ...SEED });
+localDatabaseStore.District.push({ DistrictID: 2, StateID: 1, DistrictName: "Mysuru City", Active: true, ...SEED });
+localDatabaseStore.District.push({ DistrictID: 3, StateID: 1, DistrictName: "Mangaluru", Active: true, ...SEED });
+localDatabaseStore.District.push({ DistrictID: 4, StateID: 1, DistrictName: "Hubli-Dharwad", Active: true, ...SEED });
+localDatabaseStore.District.push({ DistrictID: 5, StateID: 1, DistrictName: "Belgaum", Active: true, ...SEED });
+
+localDatabaseStore.UnitType.push({ UnitTypeID: 1, UnitTypeName: "Police Station", CityDistState: "City", Hierarchy: 1, Active: true, ...SEED });
+localDatabaseStore.UnitType.push({ UnitTypeID: 2, UnitTypeName: "Sub-Division", CityDistState: "District", Hierarchy: 2, Active: true, ...SEED });
+
+localDatabaseStore.Unit.push({ UnitID: 1, UnitName: "Ullal PS", TypeID: 1, ParentUnit: 0, NationalityID: 1, StateID: 1, DistrictID: 3, Active: true, ...SEED });
+localDatabaseStore.Unit.push({ UnitID: 2, UnitName: "Cubbon Park PS", TypeID: 1, ParentUnit: 0, NationalityID: 1, StateID: 1, DistrictID: 1, Active: true, ...SEED });
+localDatabaseStore.Unit.push({ UnitID: 3, UnitName: "Vijaynagar PS", TypeID: 1, ParentUnit: 0, NationalityID: 1, StateID: 1, DistrictID: 2, Active: true, ...SEED });
+
+localDatabaseStore.Rank.push({ RankID: 1, RankName: "Inspector", Hierarchy: 5, Active: true, ...SEED });
+localDatabaseStore.Rank.push({ RankID: 2, RankName: "Sub-Inspector", Hierarchy: 6, Active: true, ...SEED });
+localDatabaseStore.Rank.push({ RankID: 3, RankName: "Constable", Hierarchy: 10, Active: true, ...SEED });
+
+localDatabaseStore.Designation.push({ DesignationID: 1, DesignationName: "Investigating Officer", Active: true, SortOrder: 1, ...SEED });
+localDatabaseStore.Designation.push({ DesignationID: 2, DesignationName: "Station House Officer", Active: true, SortOrder: 2, ...SEED });
+
+localDatabaseStore.CasteMaster.push({ caste_master_id: 1, caste_master_name: "General", ...SEED });
+localDatabaseStore.CasteMaster.push({ caste_master_id: 2, caste_master_name: "OBC", ...SEED });
+localDatabaseStore.CasteMaster.push({ caste_master_id: 3, caste_master_name: "SC", ...SEED });
+localDatabaseStore.CasteMaster.push({ caste_master_id: 4, caste_master_name: "ST", ...SEED });
+
+localDatabaseStore.ReligionMaster.push({ ReligionID: 1, ReligionName: "Hindu", ...SEED });
+localDatabaseStore.ReligionMaster.push({ ReligionID: 2, ReligionName: "Muslim", ...SEED });
+localDatabaseStore.ReligionMaster.push({ ReligionID: 3, ReligionName: "Christian", ...SEED });
+
+localDatabaseStore.OccupationMaster.push({ OccupationID: 1, OccupationName: "Government Employee", ...SEED });
+localDatabaseStore.OccupationMaster.push({ OccupationID: 2, OccupationName: "Private Employee", ...SEED });
+localDatabaseStore.OccupationMaster.push({ OccupationID: 3, OccupationName: "Self-Employed", ...SEED });
+localDatabaseStore.OccupationMaster.push({ OccupationID: 4, OccupationName: "Student", ...SEED });
+
+localDatabaseStore.CaseStatusMaster.push({ CaseStatusID: 1, CaseStatusName: "Under Investigation", ...SEED });
+localDatabaseStore.CaseStatusMaster.push({ CaseStatusID: 2, CaseStatusName: "Registered", ...SEED });
+localDatabaseStore.CaseStatusMaster.push({ CaseStatusID: 3, CaseStatusName: "Chargesheet Filed", ...SEED });
+localDatabaseStore.CaseStatusMaster.push({ CaseStatusID: 4, CaseStatusName: "Closed", ...SEED });
+localDatabaseStore.CaseStatusMaster.push({ CaseStatusID: 5, CaseStatusName: "Pending", ...SEED });
+
+localDatabaseStore.CaseCategory.push({ CaseCategoryID: 1, LookupValue: "FIR", ...SEED });
+localDatabaseStore.CaseCategory.push({ CaseCategoryID: 2, LookupValue: "UDR", ...SEED });
+localDatabaseStore.CaseCategory.push({ CaseCategoryID: 3, LookupValue: "PAR", ...SEED });
+
+localDatabaseStore.GravityOffence.push({ GravityOffenceID: 1, LookupValue: "Heinous", ...SEED });
+localDatabaseStore.GravityOffence.push({ GravityOffenceID: 2, LookupValue: "Non-Heinous", ...SEED });
+
+localDatabaseStore.CrimeHead.push({ CrimeHeadID: 1, CrimeGroupName: "Crimes Against Body", Active: true, ...SEED });
+localDatabaseStore.CrimeHead.push({ CrimeHeadID: 2, CrimeGroupName: "Property Offences", Active: true, ...SEED });
+localDatabaseStore.CrimeHead.push({ CrimeHeadID: 3, CrimeGroupName: "Crimes Against Women", Active: true, ...SEED });
+localDatabaseStore.CrimeHead.push({ CrimeHeadID: 4, CrimeGroupName: "Cyber Crimes", Active: true, ...SEED });
+localDatabaseStore.CrimeHead.push({ CrimeHeadID: 5, CrimeGroupName: "Economic Offences", Active: true, ...SEED });
+
+localDatabaseStore.CrimeSubHead.push({ CrimeSubHeadID: 1, CrimeHeadID: 1, CrimeHeadName: "Murder", SeqID: 1, ...SEED });
+localDatabaseStore.CrimeSubHead.push({ CrimeSubHeadID: 2, CrimeHeadID: 1, CrimeHeadName: "Attempt to Murder", SeqID: 2, ...SEED });
+localDatabaseStore.CrimeSubHead.push({ CrimeSubHeadID: 3, CrimeHeadID: 2, CrimeHeadName: "Housebreaking", SeqID: 1, ...SEED });
+localDatabaseStore.CrimeSubHead.push({ CrimeSubHeadID: 4, CrimeHeadID: 2, CrimeHeadName: "Robbery", SeqID: 2, ...SEED });
+localDatabaseStore.CrimeSubHead.push({ CrimeSubHeadID: 5, CrimeHeadID: 4, CrimeHeadName: "Online Fraud", SeqID: 1, ...SEED });
+
+localDatabaseStore.Act.push({ ActCode: "IPC", ActDescription: "Indian Penal Code, 1860", ShortName: "IPC", Active: true, ...SEED });
+localDatabaseStore.Act.push({ ActCode: "BNS", ActDescription: "Bharatiya Nyaya Sanhita, 2023", ShortName: "BNS", Active: true, ...SEED });
+localDatabaseStore.Act.push({ ActCode: "IT", ActDescription: "Information Technology Act, 2000", ShortName: "IT Act", Active: true, ...SEED });
+
+localDatabaseStore.Section.push({ ActCode: "IPC", SectionCode: "302", SectionDescription: "Murder", Active: true, ...SEED });
+localDatabaseStore.Section.push({ ActCode: "IPC", SectionCode: "307", SectionDescription: "Attempt to Murder", Active: true, ...SEED });
+localDatabaseStore.Section.push({ ActCode: "IPC", SectionCode: "376", SectionDescription: "Rape", Active: true, ...SEED });
+localDatabaseStore.Section.push({ ActCode: "IPC", SectionCode: "420", SectionDescription: "Cheating and Dishonestly Inducing Delivery of Property", Active: true, ...SEED });
+localDatabaseStore.Section.push({ ActCode: "IT", SectionCode: "66C", SectionDescription: "Identity Theft", Active: true, ...SEED });
+
+localDatabaseStore.Court.push({ CourtID: 1, CourtName: "Karnataka High Court", DistrictID: 1, StateID: 1, Active: true, ...SEED });
+localDatabaseStore.Court.push({ CourtID: 2, CourtName: "Sessions Court, Bengaluru", DistrictID: 1, StateID: 1, Active: true, ...SEED });
+
+localDatabaseStore.Employee.push({ EmployeeID: 1, DistrictID: 1, UnitID: 2, RankID: 1, DesignationID: 1, KGID: "KGID8812", FirstName: "Inspector H. S. Rao", EmployeeDOB: "1980-05-15", GenderID: 1, BloodGroupID: 1, PhysicallyChallenged: false, AppointmentDate: "2005-08-01", ...SEED });
+localDatabaseStore.Employee.push({ EmployeeID: 2, DistrictID: 2, UnitID: 3, RankID: 2, DesignationID: 1, KGID: "KGID9930", FirstName: "SI Meera B.", EmployeeDOB: "1988-11-22", GenderID: 2, BloodGroupID: 2, PhysicallyChallenged: false, AppointmentDate: "2012-03-15", ...SEED });
+
+localDatabaseStore.CaseMaster.push({ CaseMasterID: 1, CrimeNo: "CR-2026-0102", CaseNo: "FIR-2026-102", CrimeRegisteredDate: "2026-07-02", PolicePersonID: 1, PoliceStationID: 2, CaseCategoryID: 1, GravityOffenceID: 1, CrimeMajorHeadID: 1, CrimeMinorHeadID: 1, CaseStatusID: 1, CourtID: 1, IncidentFromDate: "2026-07-02T22:00:00Z", IncidentToDate: "2026-07-02T23:30:00Z", InfoReceivedPSDate: "2026-07-03T01:15:00Z", latitude: 12.9716, longitude: 77.5946, BriefFacts: "Victim found with stab injuries near MG Road. CCTV footage captured suspect fleeing on two-wheeler KA-01-MC-4592.", ...SEED });
+localDatabaseStore.CaseMaster.push({ CaseMasterID: 2, CrimeNo: "CR-2026-0145", CaseNo: "FIR-2026-145", CrimeRegisteredDate: "2026-07-10", PolicePersonID: 2, PoliceStationID: 3, CaseCategoryID: 1, GravityOffenceID: 2, CrimeMajorHeadID: 2, CrimeMinorHeadID: 3, CaseStatusID: 2, CourtID: 2, IncidentFromDate: "2026-07-10T03:00:00Z", IncidentToDate: "2026-07-10T05:00:00Z", InfoReceivedPSDate: "2026-07-10T06:30:00Z", latitude: 12.3051, longitude: 76.6551, BriefFacts: "Residential housebreaking in Vijaynagar area. Jewellery and cash worth Rs 4.5 lakhs stolen.", ...SEED });
+
+localDatabaseStore.ComplainantDetails.push({ ComplainantID: 1, CaseMasterID: 1, ComplainantName: "Smt. Lakshmi Devi", AgeYear: 45, OccupationID: 2, ReligionID: 1, CasteID: 1, GenderID: 2, ...SEED });
+localDatabaseStore.ComplainantDetails.push({ ComplainantID: 2, CaseMasterID: 2, ComplainantName: "Sri. Ramesh Gowda", AgeYear: 52, OccupationID: 3, ReligionID: 1, CasteID: 2, GenderID: 1, ...SEED });
+
+localDatabaseStore.Victim.push({ VictimMasterID: 1, CaseMasterID: 1, VictimName: "Raju K.", AgeYear: 28, GenderID: 1, VictimPolice: "0", ...SEED });
+localDatabaseStore.Victim.push({ VictimMasterID: 2, CaseMasterID: 2, VictimName: "Smt. Lakshmi Devi", AgeYear: 45, GenderID: 2, VictimPolice: "0", ...SEED });
+
+localDatabaseStore.Accused.push({ AccusedMasterID: 1, CaseMasterID: 1, AccusedName: "Unknown Suspect", AgeYear: 0, GenderID: 1, PersonID: "A1", ...SEED });
+localDatabaseStore.Accused.push({ AccusedMasterID: 2, CaseMasterID: 2, AccusedName: "Unknown Person(s)", AgeYear: 0, GenderID: 1, PersonID: "A1", ...SEED });
+
 
 // Role-Based Access Control mapping
 const ROLE_MUTATION_PERMISSIONS = {
@@ -226,17 +301,17 @@ function validateSchemaFields(tableName, data, isUpdate = false) {
         }
 
         if (val !== undefined && val !== null) {
-            // Type validation
-            if (fieldConfig.type === 'number' && typeof val !== 'number') {
-                errors.push(`Field '${fieldName}' must be a number.`);
+            // Type validation — Catalyst DataStore types
+            if ((fieldConfig.type === 'bigint' || fieldConfig.type === 'double') && typeof val !== 'number') {
+                errors.push(`Field '${fieldName}' must be a number (type: ${fieldConfig.type}).`);
             }
             if (fieldConfig.type === 'boolean' && typeof val !== 'boolean') {
                 errors.push(`Field '${fieldName}' must be a boolean.`);
             }
-            // Max length check
-            if (fieldConfig.type === 'string') {
+            // Max length check for text fields
+            if (fieldConfig.type === 'text') {
                 if (typeof val !== 'string') {
-                    errors.push(`Field '${fieldName}' must be a string.`);
+                    errors.push(`Field '${fieldName}' must be a string (type: text).`);
                 } else if (fieldConfig.maxLength && val.length > fieldConfig.maxLength) {
                     errors.push(`Field '${fieldName}' exceeds max length of ${fieldConfig.maxLength}.`);
                 }
@@ -266,7 +341,7 @@ app.get('/api/crud/:tableName', async (req, res) => {
         try {
             // Catalyst ZCQL Query matching page and limits
             const zcql = req.catalyst.zcql();
-            let query = `SELECT * FROM ${tableName} WHERE IsDeleted = false`;
+            let query = `SELECT * FROM ${tableName} WHERE is_active = true`;
             const queryRes = await zcql.executeZCQLQuery(query);
             items = queryRes.map(row => row[tableName]);
         } catch (err) {
@@ -279,7 +354,8 @@ app.get('/api/crud/:tableName', async (req, res) => {
     }
 
     // Filter out soft deleted records
-    let result = items.filter(item => !item.IsDeleted);
+    // Filter out soft-deleted records (is_active = false)
+    let result = items.filter(item => item.is_active !== false);
 
     // Apply Search matching string fields
     if (search) {
@@ -327,7 +403,7 @@ app.get('/api/crud/:tableName/:id', async (req, res) => {
     if (req.catalyst) {
         try {
             const table = req.catalyst.datastore().table(tableName);
-            const query = `SELECT * FROM ${tableName} WHERE ${pkField} = ${id} AND IsDeleted = false`;
+            const query = `SELECT * FROM ${tableName} WHERE ${pkField} = ${id} AND is_active = true`;
             const queryRes = await req.catalyst.zcql().executeZCQLQuery(query);
             if (queryRes.length > 0) {
                 record = queryRes[0][tableName];
@@ -339,7 +415,7 @@ app.get('/api/crud/:tableName/:id', async (req, res) => {
 
     if (!record) {
         record = (localDatabaseStore[tableName] || []).find(item => 
-            String(item[pkField]) === String(id) && !item.IsDeleted
+            String(item[pkField]) === String(id) && item.is_active !== false
         );
     }
 
@@ -374,12 +450,11 @@ app.post('/api/crud/:tableName', async (req, res) => {
     const newRecord = {
         ...req.body,
         [pkField]: recordId,
-        CreatedAt: new Date().toISOString(),
-        CreatedBy: req.user?.name || "System",
-        UpdatedAt: new Date().toISOString(),
-        UpdatedBy: req.user?.name || "System",
-        IsDeleted: false,
-        VersionNumber: 1
+        created_at: new Date().toISOString(),
+        created_by: req.user?.name || "System",
+        updated_at: new Date().toISOString(),
+        updated_by: req.user?.name || "System",
+        is_active: true
     };
 
     if (req.catalyst) {
@@ -436,9 +511,8 @@ app.put('/api/crud/:tableName/:id', async (req, res) => {
         ...oldRecord,
         ...req.body,
         [pkField]: oldRecord[pkField], // keep primary key immutable
-        UpdatedAt: new Date().toISOString(),
-        UpdatedBy: req.user?.name || "System",
-        VersionNumber: (oldRecord.VersionNumber || 1) + 1
+        updated_at: new Date().toISOString(),
+        updated_by: req.user?.name || "System"
     };
 
     // Calculate Audit OldValue vs NewValue delta details
@@ -499,9 +573,9 @@ app.delete('/api/crud/:tableName/:id', async (req, res) => {
     // Perform Soft Delete
     const deletedRecord = {
         ...oldRecord,
-        IsDeleted: true,
-        UpdatedAt: new Date().toISOString(),
-        UpdatedBy: req.user?.name || "System"
+        is_active: false,
+        updated_at: new Date().toISOString(),
+        updated_by: req.user?.name || "System"
     };
 
     if (req.catalyst) {
